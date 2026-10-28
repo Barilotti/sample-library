@@ -66,3 +66,22 @@ test('перевод запросов RU/EN и слитные слова', () =>
   assert.deepStrictEqual(C.splitCompound('kickdrum'), ['kick', 'drum']);
   assert.strictEqual(C.splitCompound('notification'), null);
 });
+
+test('реальные названия из библиотеки команды', () => {
+  const cat = (p) => { const r = C.classify(p.split('/'), null); return r.sub || r.cat; };
+  assert.strictEqual(cat('Boom Library - Magic Bundle/boom35_1/MACK Effect Impact Sub Rumble.wav'), 'scifi');
+  assert.strictEqual(cat('Boom Library - Magic Bundle/boom35_3/MACK Fire Burst Spirit Light.wav'), 'scifi');
+  assert.strictEqual(cat('BOOM.Library.DOGS.WAV/Dogs_01-07/Australian Shepherd (Pepper) Bark, Yelp 1.wav'), 'animals');
+  assert.strictEqual(cat('KROTOS/Krotos Gun Foley SFX Library WAV/Pistol Slide.wav'), 'weapons');
+  assert.strictEqual(cat('Новая папка/Аварии/Лобовое столкновение.mp3'), 'vehicles');
+  assert.strictEqual(cat('Новая папка/Анатомические звуки/Мужчина зевает.mp3'), 'vocal');
+  assert.strictEqual(cat('Armas/1. Fornite SFX PACK/Shield Break 1.mp3'), 'weapons');
+  assert.strictEqual(cat('Ambients/Дощ б\'є по підвіконню.wav'), 'field');
+  assert.strictEqual(cat('Ambients/Ніч біля ставка.flac'), 'field');
+  assert.strictEqual(cat('Ambients/звукилеса.wav'), 'field');
+  assert.strictEqual(cat('Ambients/Сукалёгкийдождь.wav'), 'field');
+  assert.strictEqual(cat('Ambients/ахуєнийгул6хвилин.flac'), 'ambient');
+  assert.strictEqual(cat('Ambients/Хлопають1годину.flac'), 'crowd');
+  assert.strictEqual(cat('Ambients/ES_City Traffic 18 - SFX Producer.mp3'), 'field');
+  assert.strictEqual(cat('New Pack/Memes/PARTY HORN.mp3'), 'cartoon');
+});

@@ -7,7 +7,7 @@ const fsp = fs.promises;
 const path = require('path');
 const { classify } = require('../shared/categorize');
 
-const AUDIO_EXT = new Set(['.wav', '.wave', '.aif', '.aiff', '.aifc', '.mp3', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.wma', '.opus']);
+const AUDIO_EXT = new Set(['.wav', '.wave', '.aif', '.aiff', '.aifc', '.mp3', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.wma', '.opus', '.webm', '.weba']);
 const SKIP_DIRS = new Set(['$recycle.bin', 'system volume information', '.git', 'node_modules', '__macosx', '.ds_store']);
 
 async function walk(root, onFile, shouldStop) {

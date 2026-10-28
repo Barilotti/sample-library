@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const RULES_VERSION = 3;
+  const RULES_VERSION = 4;
 
   // Категории: id, название в интерфейсе, родитель, ключевые слова (en, ru, транслит).
   // Русские слова автоматически дополняются транслитом, поэтому "бочка" ловит и "bochka".
@@ -26,31 +26,69 @@
     { id: 'synth', label: 'Синты и клавиши', words: ['synth', 'syn', 'lead', 'pluck', 'arp', 'arpeggio', 'chord', 'chords', 'stab', 'keys', 'piano', 'rhodes', 'organ', 'epiano', 'синт', 'синтезатор', 'лид', 'пианино', 'рояль', 'аккорд', 'аккорды', 'орган', 'клавиши', 'арпеджио'] },
     { id: 'pad', parent: 'synth', label: 'Пэды', words: ['pad', 'pads', 'пэд', 'пад', 'пэды'] },
 
-    { id: 'instruments', label: 'Живые инструменты', words: ['guitar', 'gtr', 'strings', 'violin', 'cello', 'viola', 'brass', 'trumpet', 'trombone', 'horn', 'sax', 'flute', 'woodwind', 'harp', 'orchestra', 'orchestral', 'bell', 'bells', 'гитара', 'струнные', 'скрипка', 'виолончель', 'духовые', 'труба', 'тромбон', 'саксофон', 'флейта', 'арфа', 'оркестр', 'колокол', 'колокольчик', 'балалайка', 'баян', 'гармонь'] },
+    { id: 'instruments', label: 'Живые инструменты', words: ['guitar', 'gtr', 'strings', 'violin', 'cello', 'viola', 'brass', 'trumpet', 'trombone', 'horn', 'sax', 'flute', 'woodwind', 'harp', 'orchestra', 'orchestral', 'bell', 'bells', 'гитара', 'струнные', 'скрипка', 'виолончель', 'духовые', 'труба', 'тромбон', 'саксофон', 'флейта', 'арфа', 'оркестр', 'колокол', 'колокольчик', 'балалайка', 'баян', 'гармонь', 'instrument', 'dj', 'музыка', 'музыкальные', 'литавры', 'горн', 'колокола', 'бубенчики', 'колокольчики'] },
 
-    { id: 'vocal', label: 'Вокал и голос', words: ['vocal', 'vocals', 'vox', 'voice', 'voices', 'choir', 'acapella', 'speech', 'talk', 'whisper', 'scream', 'shout', 'breath', 'laugh', 'вокал', 'голос', 'голоса', 'хор', 'речь', 'шёпот', 'шепот', 'крик', 'дыхание', 'смех', 'разговор', 'фраза'] },
+    { id: 'vocal', label: 'Вокал и голос', words: ['vocal', 'vocals', 'vox', 'voice', 'voices', 'choir', 'acapella', 'speech', 'talk', 'whisper', 'scream', 'shout', 'breath', 'laugh', 'вокал', 'голос', 'голоса', 'хор', 'речь', 'шёпот', 'шепот', 'крик', 'дыхание', 'смех', 'разговор', 'фраза', 'risas', 'angry', 'awwww', 'aww', 'romance', 'смех', 'вздох', 'кашель', 'чихание', 'голоса', 'body', 'heartbeat', 'heart', 'cry', 'crying', 'baby', 'scared', 'анатомические', 'сердце', 'сердцебиение', 'икает', 'зевает', 'чихает', 'кашляет', 'отрыжка', 'сморкается', 'урчание', 'желудок', 'плач', 'ребенок', 'младенец', 'человеческие'] },
 
     { id: 'ambient', label: 'Эмбиент и атмосферы', words: ['ambient', 'ambience', 'ambiance', 'amb', 'atmos', 'atmosphere', 'atmo', 'drone', 'texture', 'soundscape', 'roomtone', 'tone', 'bed', 'background', 'эмбиент', 'эмбиэнт', 'атмосфера', 'атмосферы', 'фон', 'дрон', 'текстура', 'гул', 'саундскейп', 'тишина'] },
 
-    { id: 'field', label: 'Природа и город', words: ['field', 'fieldrec', 'nature', 'rain', 'wind', 'storm', 'thunder', 'forest', 'birds', 'bird', 'water', 'river', 'sea', 'ocean', 'waves', 'stream', 'fire', 'insects', 'night', 'city', 'street', 'traffic', 'crowd', 'market', 'park', 'subway', 'metro', 'station', 'cafe', 'restaurant', 'office', 'природа', 'дождь', 'ветер', 'гроза', 'гром', 'лес', 'птицы', 'птица', 'вода', 'река', 'море', 'океан', 'волны', 'ручей', 'огонь', 'костёр', 'костер', 'насекомые', 'сверчки', 'ночь', 'город', 'улица', 'трафик', 'толпа', 'рынок', 'парк', 'метро', 'вокзал', 'кафе', 'ресторан', 'офис', 'деревня', 'двор'] },
+    { id: 'field', label: 'Природа и город', words: ['field', 'fieldrec', 'nature', 'rain', 'wind', 'storm', 'thunder', 'forest', 'birds', 'bird', 'water', 'river', 'sea', 'ocean', 'waves', 'stream', 'fire', 'insects', 'night', 'city', 'street', 'traffic', 'crowd', 'market', 'park', 'subway', 'metro', 'station', 'cafe', 'restaurant', 'office', 'природа', 'дождь', 'ветер', 'гроза', 'гром', 'лес', 'птицы', 'птица', 'вода', 'река', 'море', 'океан', 'волны', 'ручей', 'огонь', 'костёр', 'костер', 'насекомые', 'сверчки', 'ночь', 'город', 'улица', 'трафик', 'толпа', 'рынок', 'парк', 'метро', 'вокзал', 'кафе', 'ресторан', 'офис', 'деревня', 'двор', 'environment', 'weather', 'blizzard', 'cave', 'waterfall', 'pond', 'lake', 'leaves', 'jungle', 'farm', 'village', 'sewer', 'bubbles', 'liquid', 'drip', 'drops', 'splash', 'ashes', 'погода', 'метель', 'вьюга', 'пещера', 'водопад', 'пруд', 'озеро', 'листья', 'джунгли', 'ферма', 'пузыри', 'капли', 'капает', 'всплеск', 'ливень', 'поля', 'катаклизмы', 'смолоскип', 'факел', 'пламя'] },
 
     { id: 'fx', label: 'Эффекты', words: ['fx', 'sfx', 'effect', 'effects', 'эффект', 'эффекты', 'звуковые'] },
-    { id: 'transition', parent: 'fx', label: 'Переходы', words: ['riser', 'rise', 'uplifter', 'downlifter', 'sweep', 'whoosh', 'swoosh', 'swish', 'transition', 'reverse', 'rev', 'build', 'buildup', 'fall', 'downer', 'райзер', 'свуш', 'вжух', 'переход', 'реверс', 'подъём', 'подъем', 'нарастание', 'пролёт', 'пролет'] },
-    { id: 'impact', parent: 'fx', label: 'Удары и импакты', words: ['impact', 'hit', 'hits', 'boom', 'braam', 'slam', 'thud', 'stinger', 'trailer', 'cinematic', 'импакт', 'удар', 'удары', 'бум', 'хит'] },
+    { id: 'transition', parent: 'fx', label: 'Переходы', words: ['riser', 'rise', 'uplifter', 'downlifter', 'sweep', 'whoosh', 'swoosh', 'swish', 'transition', 'reverse', 'rev', 'build', 'buildup', 'fall', 'downer', 'райзер', 'свуш', 'вжух', 'переход', 'реверс', 'подъём', 'подъем', 'нарастание', 'пролёт', 'пролет', 'whooshs', 'whooshes', 'slow', 'transitions', 'свист'] },
+    { id: 'impact', parent: 'fx', label: 'Удары и импакты', words: ['impact', 'hit', 'hits', 'boom', 'braam', 'slam', 'thud', 'stinger', 'trailer', 'cinematic', 'импакт', 'удар', 'удары', 'бум', 'хит', 'boom', 'cinematic', 'удары'] },
     { id: 'glitch', parent: 'fx', label: 'Глитч и шумы', words: ['glitch', 'noise', 'static', 'vinyl', 'crackle', 'hiss', 'distortion', 'stutter', 'bitcrush', 'глитч', 'шум', 'шумы', 'помехи', 'треск', 'винил', 'шипение'] },
-    { id: 'ui', parent: 'fx', label: 'Интерфейс', words: ['ui', 'interface', 'click', 'button', 'beep', 'notification', 'alert', 'menu', 'hover', 'select', 'confirm', 'error', 'blip', 'интерфейс', 'клик', 'кнопка', 'писк', 'уведомление', 'меню', 'сигнал'] },
-    { id: 'scifi', parent: 'fx', label: 'Sci-fi и магия', words: ['scifi', 'sci', 'laser', 'robot', 'spaceship', 'magic', 'spell', 'portal', 'energy', 'zap', 'teleport', 'лазер', 'робот', 'магия', 'заклинание', 'портал', 'энергия', 'космос'] },
+    { id: 'ui', parent: 'fx', label: 'Интерфейс', words: ['ui', 'interface', 'click', 'button', 'beep', 'notification', 'alert', 'menu', 'hover', 'select', 'confirm', 'error', 'blip', 'интерфейс', 'клик', 'кнопка', 'писк', 'уведомление', 'меню', 'сигнал', 'alerts', 'ding', 'correct', 'achievement', 'award', 'coming', 'completed', 'timer', 'pause', 'rewind', 'pop', 'pops', 'сигналы', 'тревога', 'неправильный', 'правильный', 'таймер', 'гудки', 'звонок', 'chime', 'fail', 'lose', 'win', 'censored', 'censorship', 'bleep', 'cursor'] },
+    { id: 'scifi', parent: 'fx', label: 'Sci-fi и магия', words: ['scifi', 'sci', 'laser', 'robot', 'spaceship', 'magic', 'spell', 'portal', 'energy', 'zap', 'teleport', 'лазер', 'робот', 'магия', 'заклинание', 'портал', 'энергия', 'космос', 'magical', 'wand', 'sci-fi', 'cyber', 'futuristic', 'momentum', 'electronic', 'mutate', 'космос', 'волшебство', 'зелье', 'электронные', 'электронное'] },
 
-    { id: 'foley', label: 'Фоли', words: ['foley', 'footstep', 'footsteps', 'steps', 'step', 'door', 'doors', 'cloth', 'clothes', 'fabric', 'glass', 'metal', 'wood', 'paper', 'keys', 'zipper', 'bag', 'cup', 'plate', 'chair', 'handle', 'squeak', 'creak', 'фоли', 'шаги', 'шаг', 'дверь', 'двери', 'одежда', 'ткань', 'стекло', 'металл', 'дерево', 'бумага', 'ключи', 'молния', 'сумка', 'чашка', 'тарелка', 'стул', 'скрип', 'ручка', 'посуда'] },
+    { id: 'foley', label: 'Фоли', words: ['foley', 'footstep', 'footsteps', 'steps', 'step', 'door', 'doors', 'cloth', 'clothes', 'fabric', 'glass', 'metal', 'wood', 'paper', 'keys', 'zipper', 'bag', 'cup', 'plate', 'chair', 'handle', 'squeak', 'creak', 'фоли', 'шаги', 'шаг', 'дверь', 'двери', 'одежда', 'ткань', 'стекло', 'металл', 'дерево', 'бумага', 'ключи', 'молния', 'сумка', 'чашка', 'тарелка', 'стул', 'скрип', 'ручка', 'посуда', 'bottle', 'bottles', 'can', 'cans', 'jar', 'food', 'eat', 'drink', 'cups', 'dishes', 'knocking', 'knock', 'luggage', 'bags', 'furniture', 'window', 'windows', 'chalk', 'tiza', 'vidrio', 'paper', 'sheet', 'zip', 'бутылки', 'бутылка', 'банки', 'банка', 'еда', 'пища', 'посуда', 'стук', 'багаж', 'сумки', 'мебель', 'окна', 'окно', 'бумажные', 'канцелярские', 'замки', 'тележки', 'мусор', 'кухня', 'скрипы', 'хруст', 'звон', 'стакан', 'стаканы'] },
 
-    { id: 'weapons', label: 'Оружие и взрывы', words: ['gun', 'guns', 'gunshot', 'shot', 'rifle', 'pistol', 'reload', 'weapon', 'weapons', 'sword', 'blade', 'punch', 'kick-hit', 'explosion', 'explode', 'blast', 'debris', 'bullet', 'ricochet', 'выстрел', 'выстрелы', 'оружие', 'пистолет', 'автомат', 'винтовка', 'перезарядка', 'меч', 'клинок', 'удар кулаком', 'взрыв', 'взрывы', 'обломки', 'пуля', 'рикошет'] },
+    { id: 'weapons', label: 'Оружие и взрывы', words: ['gun', 'guns', 'gunshot', 'shot', 'rifle', 'pistol', 'reload', 'weapon', 'weapons', 'sword', 'blade', 'punch', 'kick-hit', 'explosion', 'explode', 'blast', 'debris', 'bullet', 'ricochet', 'выстрел', 'выстрелы', 'оружие', 'пистолет', 'автомат', 'винтовка', 'перезарядка', 'меч', 'клинок', 'удар кулаком', 'взрыв', 'взрывы', 'обломки', 'пуля', 'рикошет', 'armas', 'arma', 'combat', 'melee', 'medieval', 'arrow', 'bow', 'whip', 'shotgun', 'cannon', 'battle', 'fight', 'violent', 'destruction', 'destroy', 'golpe', 'холодное', 'огнестрельное', 'баталии', 'битва', 'бой', 'драка', 'лук', 'стрела', 'хлыст', 'пушка', 'разрушение'] },
 
-    { id: 'vehicles', label: 'Транспорт', words: ['car', 'cars', 'engine', 'vehicle', 'truck', 'bus', 'train', 'tram', 'plane', 'airplane', 'jet', 'helicopter', 'motorcycle', 'bike', 'boat', 'ship', 'horn', 'brake', 'skid', 'машина', 'автомобиль', 'двигатель', 'мотор', 'грузовик', 'автобус', 'поезд', 'электричка', 'трамвай', 'самолёт', 'самолет', 'вертолёт', 'вертолет', 'мотоцикл', 'лодка', 'корабль', 'гудок', 'тормоз', 'клаксон'] },
+    { id: 'vehicles', label: 'Транспорт', words: ['car', 'cars', 'engine', 'vehicle', 'truck', 'bus', 'train', 'tram', 'plane', 'airplane', 'jet', 'helicopter', 'motorcycle', 'bike', 'boat', 'ship', 'horn', 'brake', 'skid', 'машина', 'автомобиль', 'двигатель', 'мотор', 'грузовик', 'автобус', 'поезд', 'электричка', 'трамвай', 'самолёт', 'самолет', 'вертолёт', 'вертолет', 'мотоцикл', 'лодка', 'корабль', 'гудок', 'тормоз', 'клаксон', 'auto', 'autobus', 'monorail', 'subway', 'railway', 'racing', 'siren', 'sirens', 'авто', 'автомобили', 'мотоциклы', 'поезда', 'паровоз', 'самолеты', 'вертолеты', 'аэропланы', 'железная', 'гонки', 'сирена', 'сирены', 'катера', 'корабли', 'транспорт', 'аварии', 'авария', 'дтп'] },
 
-    { id: 'animals', label: 'Животные', words: ['animal', 'animals', 'dog', 'cat', 'horse', 'cow', 'wolf', 'bark', 'meow', 'growl', 'roar', 'creature', 'monster', 'животное', 'животные', 'собака', 'пёс', 'пес', 'кошка', 'кот', 'лошадь', 'корова', 'волк', 'лай', 'мяу', 'рычание', 'рык', 'монстр', 'существо'] },
+    { id: 'animals', label: 'Животные и существа', words: ['animal', 'animals', 'dog', 'dogs', 'cat', 'horse', 'horses', 'cow', 'wolf', 'bark', 'meow', 'growl', 'snarl', 'whimper', 'yelp', 'pant', 'panting', 'roar', 'creature', 'creatures', 'monster', 'monsters', 'zombie', 'dragon', 'beast', 'insect', 'insects', 'cicada', 'crow', 'frog', 'perro', 'gato', 'caballo', 'animales', 'животное', 'животные', 'собака', 'пёс', 'пес', 'кошка', 'кот', 'лошадь', 'корова', 'волк', 'лай', 'мяу', 'рычание', 'рык', 'монстр', 'существо', 'существа', 'чудовище', 'зомби', 'дракон', 'лягушки', 'ворона', 'чайки', 'собаки', 'лошади'] },
+
+    { id: 'crowd', label: 'Люди и толпа', words: ['crowd', 'crowds', 'walla', 'people', 'applause', 'clapping', 'cheer', 'cheering', 'audience', 'children', 'kids', 'party', 'stadium', 'tavern', 'aplausos', 'gente', 'люди', 'толпа', 'аплодисменты', 'овации', 'дети', 'зрители', 'публика', 'вечеринка', 'стадион', 'таверна', 'человек'] },
+    { id: 'machines', label: 'Техника и быт', words: ['machine', 'machines', 'mechanism', 'mechanical', 'industry', 'industrial', 'factory', 'construction', 'appliance', 'conditioner', 'printer', 'computer', 'keyboard', 'phone', 'telephone', 'camera', 'clock', 'ticking', 'switch', 'electric', 'electricity', 'sparks', 'radio', 'tv', 'tools', 'drill', 'saw', 'hammer', 'toilet', 'fan', 'vacuum', 'battery', 'money', 'coins', 'coin', 'cash', 'механизм', 'механизмы', 'техника', 'индустрия', 'завод', 'фабрика', 'стройка', 'бытовая', 'быт', 'кондиционер', 'принтер', 'компьютер', 'компьютеры', 'клавиатура', 'телефон', 'фотоаппарат', 'фотоаппараты', 'камеры', 'часы', 'тиканье', 'будильник', 'выключатель', 'переключатели', 'электричество', 'электроприборы', 'радио', 'телевизор', 'инструменты', 'дрель', 'пила', 'молоток', 'туалет', 'вентилятор', 'пылесос', 'деньги', 'монеты', 'касса', 'оргтехника', 'винты', 'film', 'projector', 'slot', 'проектор', 'кинопроектор', 'зажигалка', 'зажигалки', 'велосипед'] },
+    { id: 'cartoon', label: 'Мультяшные и мемы', words: ['cartoon', 'comic', 'comedy', 'funny', 'meme', 'memes', 'anime', 'toy', 'toys', 'boing', 'squeaky', 'minecraft', 'videogame', 'videogames', 'arcade', 'retro', '8bit', 'caricatura', 'мультяшные', 'мультяшный', 'комические', 'мемы', 'мем', 'игрушки', 'игрушка', 'аниме', 'прикол', 'fofos', 'jingle', 'pickup', 'bonus', 'powerup', 'pokemon', 'mario', 'roblox', 'games', 'game', 'plants', 'zombies', 'momo', 'boing', 'cute', 'roulette', 'spinning'] },
+    { id: 'horror', label: 'Ужасы и мистика', words: ['horror', 'terror', 'scary', 'creepy', 'spooky', 'haunted', 'ghost', 'tension', 'suspense', 'ужасы', 'ужас', 'мистика', 'страшный', 'жуткий', 'призрак', 'напряжение', 'саспенс', 'susto', 'asustado', 'scare', 'jumpscare', 'флешбеки'] },
 
     { id: 'other', label: 'Без категории', words: [] },
   ];
+
+  // Украинские слова в названиях файлов (интерфейс остаётся русским).
+  const UK_WORDS = {
+    drums: ['барабани', 'ударні'],
+    snare: ['малий'],
+    clap: ['оплески', 'плескіт'],
+    cymbal: ['тарілка', 'тарілки'],
+    perc: ['перкусія', 'бубон', 'трикутник'],
+    bass: ['баси'],
+    synth: ['піаніно', 'фортепіано', 'акорд', 'акорди', 'клавішні'],
+    pad: ['пед', 'педи'],
+    instruments: ['гітара', 'віолончель', 'струнні', 'духові', 'дзвін', 'дзвони', 'дзвіночок', 'бандура', 'сопілка', 'цимбали', 'трембіта', 'музика'],
+    vocal: ['мова', 'мовлення', 'шепіт', 'дихання', 'сміх', 'розмова', 'кашель'],
+    crowd: ['люди', 'натовп', 'оплески', 'діти', 'глядачі', 'хлопають', 'аплодують'],
+    ambient: ['атмосфери', 'гудіння', 'тиша'],
+    field: ['природа', 'дощ', 'вітер', 'гроза', 'грім', 'ліс', 'лісу', 'птахи', 'птах', 'пташки', 'річка', 'хвилі', 'струмок', 'вогонь', 'вогнище', 'полум', 'смолоскип', 'комахи', 'цвіркуни', 'ніч', 'місто', 'вулиця', 'трафік', 'ринок', 'вокзал', 'офіс', 'село', 'ставок', 'ставка', 'озеро', 'заметіль', 'хуртовина', 'сніг', 'підвіконня', 'краплі'],
+    fx: ['ефект', 'ефекти'],
+    transition: ['перехід', 'наростання', 'проліт'],
+    impact: ['імпакт', 'удари'],
+    glitch: ['глітч', 'шуми', 'перешкоди', 'тріск', 'шипіння'],
+    ui: ['інтерфейс', 'клік', 'сповіщення', 'дзвінок'],
+    scifi: ['магія', 'закляття', 'енергія'],
+    foley: ['фолі', 'кроки', 'крок', 'двері', 'одяг', 'тканина', 'скло', 'папір', 'ключі', 'блискавка', 'стілець', 'посуд', 'пляшка', 'стукіт'],
+    weapons: ['постріл', 'постріли', 'зброя', 'пістолет', 'гвинтівка', 'вибух', 'вибухи', 'уламки', 'куля', 'бійка'],
+    vehicles: ['автомобіль', 'двигун', 'вантажівка', 'потяг', 'поїзд', 'літак', 'гелікоптер', 'вертоліт', 'човен', 'корабель', 'гальма', 'сирена'],
+    animals: ['тварина', 'тварини', 'цуценя', 'кіт', 'кішка', 'кінь', 'коні', 'вовк', 'гавкіт', 'гавкання', 'нявкання', 'гарчання', 'істота', 'жаби', 'ворона', 'чайки'],
+    machines: ['техніка', 'механізм', 'завод', 'будівництво', 'кондиціонер', 'годинник', 'телефон', 'гроші', 'монети', 'електрика', 'гвинти'],
+    horror: ['жах', 'жахи', 'страшний', 'моторошний', 'привид'],
+  };
+  for (const c of CATEGORIES) if (UK_WORDS[c.id]) c.words = c.words.concat(UK_WORDS[c.id]);
+
+  // Слабые слова: встречаются в любых категориях ("Arrow Hit", "Door Hit"), поэтому весят меньше папки.
+  const WEAK = new Set(['break', 'breaks', 'foley', 'фоли', 'sounds', 'sound', 'звуки', 'звук', 'library', 'pack', 'hit', 'hits', 'fx', 'sfx', 'effect', 'effects', 'эффект', 'эффекты', 'tone', 'bed', 'background', 'фон', 'kit', 'beat', 'rise', 'fall', 'build', 'reverse', 'rev', 'select', 'error', 'confirm', 'menu', 'hover', 'alert', 'shot', 'keys', 'key', 'can', 'pop', 'step', 'slow', 'звонок', 'удар', 'звон', 'tension', 'electric', 'electronic', 'sheet', 'eat', 'drink', 'zip', 'party', 'retro', 'oh', 'ch', 'bd', 'sd', 'hh', 'rim', 'sub', 'bell', 'bells', 'bus', 'fan', 'saw', 'drill', 'switch']);
 
   const BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 
@@ -58,9 +96,9 @@
   const TR = {
     а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',
     н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch',
-    ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+    ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', і: 'i', ї: 'yi', є: 'ye', ґ: 'g',
   };
-  const CYR = /[а-яё]/;
+  const CYR = /[а-яёіїєґ]/;
 
   function translit(s) {
     let out = '';
@@ -77,11 +115,11 @@
     const spaced = String(s)
       .replace(/\.[a-z0-9]{2,4}$/i, '')
       .replace(/one[\s_\-]?shots?/gi, 'oneshot')
-      .replace(/([a-zа-яё])([A-ZА-ЯЁ])/g, '$1 $2')
-      .replace(/([a-zA-Zа-яА-ЯёЁ])(\d)/g, '$1 $2')
-      .replace(/(\d)([a-zA-Zа-яА-ЯёЁ])/g, '$1 $2');
+      .replace(/([a-zа-яёіїєґ])([A-ZА-ЯЁІЇЄҐ])/g, '$1 $2')
+      .replace(/([a-zA-Zа-яА-ЯёЁіїєґІЇЄҐ])(\d)/g, '$1 $2')
+      .replace(/(\d)([a-zA-Zа-яА-ЯёЁіїєґІЇЄҐ])/g, '$1 $2');
     return normalize(spaced)
-      .split(/[^a-zа-я0-9#]+/)
+      .split(/[^a-zа-яіїєґ0-9#]+/)
       .filter((t) => t && !/^\d+$/.test(t) || t === '808');
   }
 
@@ -140,7 +178,28 @@
     for (const [p, id] of prefixes) {
       if (prefixOk(t, p) || (lat && prefixOk(lat, p))) hit.add(id);
     }
+    if (!hit.size && CYR.test(t) && t.length >= 7) for (const id of gluedHits(t)) hit.add(id);
     return hit;
+  }
+
+  // Слитные русские/украинские названия: «звукилеса», «сукалёгкийдождь», «ахуєнийгул».
+  // Длинные основы ищем внутри слова, короткие (гул, лес) — только в конце.
+  let gluedKeys = null;
+  function gluedHits(t) {
+    if (!gluedKeys) {
+      gluedKeys = [];
+      for (const [w, ids] of exact) if (CYR.test(w) && w.length >= 3) gluedKeys.push([w, ids]);
+      for (const [p, id] of prefixes) if (CYR.test(p) && p.length >= 4) gluedKeys.push([p, new Set([id])]);
+    }
+    const out = new Set();
+    for (const [k, ids] of gluedKeys) {
+      let ok = false;
+      if (k.length >= 5) ok = t.includes(k);
+      else if (k.length === 4) ok = t.endsWith(k) || t.slice(0, -1).endsWith(k) || t.slice(0, -2).endsWith(k);
+      else ok = t.endsWith(k) || (t.length > 4 && RU_ENDINGS.test(t.slice(t.lastIndexOf(k) + 3)) && t.lastIndexOf(k) > 2 && t.lastIndexOf(k) + 3 >= t.length - 2);
+      if (ok) for (const id of ids) out.add(id);
+    }
+    return out;
   }
 
   // Словарь переводов для поиска: одно понятие на двух языках. Запрос «dog» найдёт «Лай собаки»,
@@ -336,6 +395,16 @@
 
   const MELODIC = new Set(['bass', 'synth', 'instruments', 'vocal']);
 
+  // Названия издателей и сайтов ничего не говорят о звуке ("Boom Library" — не взрыв).
+  const VENDORS = /boom\s*library|\bboom\d+(_\d+)?|boom\s*one|krotos|soundmorph|blastwave(\s*fx)?|sound\s*ideas|sfx\s*producer|epidemic|artlist|stock\s*sound|y2mate(\.com)?|rutracker(\.org)?|zapsplat|freesound|pixabay|soundsnap|pro\s*sound\s*effects|just\s*sound\s*effects|^es_|\bes_/gi;
+  function stripVendors(text) {
+    return String(text).replace(VENDORS, ' ');
+  }
+
+  // Жанровые паки («Magic Bundle», «Мистика, ужасы», «Memes»): папка важнее отдельных слов в имени,
+  // иначе «Fire Spell» из магической библиотеки уедет в «Природу».
+  const GENRE = new Set(['scifi', 'horror', 'cartoon']);
+
   // Главная функция: путь относительно корня библиотеки -> категория, тип, BPM, тональность.
   // segments: ["Drums", "Kicks", "Kick_01.wav"], последний элемент — имя файла.
   function classify(segments, durationSec) {
@@ -344,22 +413,21 @@
     const scores = new Map();
     const add = (id, w) => scores.set(id, (scores.get(id) || 0) + w);
 
-    const scoreText = (text, weight) => {
+    const scoreText = (text, weight, isFolder) => {
+      text = stripVendors(text);
       const n = normalize(text).replace(/[_\-.]+/g, ' ');
       for (const [ph, id] of phrases) if (n.includes(ph)) add(id, weight);
-      const seen = new Set();
+      const best = new Map();
       for (const tok of tokenize(text)) {
-        for (const id of categoriesForToken(tok)) {
-          if (seen.has(id)) continue;
-          seen.add(id);
-          add(id, weight);
-        }
+        const w = WEAK.has(tok) ? weight * 0.35 : weight;
+        for (const id of categoriesForToken(tok)) if ((best.get(id) || 0) < w) best.set(id, w);
       }
+      for (const [id, w] of best) add(id, isFolder && GENRE.has(id) && w >= weight ? w + 3 : w);
     };
 
     scoreText(fileName, 3);
     // Ближайшая папка весит больше дальних.
-    folders.forEach((f, i) => scoreText(f, 1 + (i + 1) / folders.length));
+    folders.forEach((f, i) => scoreText(f, 1 + (i + 1) / folders.length, true));
 
     // Подкатегория тянет за собой родителя.
     for (const [id, s] of [...scores]) {
