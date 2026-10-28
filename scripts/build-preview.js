@@ -8,7 +8,6 @@ const html = fs.readFileSync(path.join(R, 'renderer', 'index.html'), 'utf8');
 const body = html.split('<!--APP-->')[1].split('<!--/APP-->')[0];
 const read = (p) => fs.readFileSync(path.join(R, p), 'utf8');
 const page = `<title>Сэмплотека</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&family=Unbounded:wght@500..700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>

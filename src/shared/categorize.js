@@ -69,7 +69,7 @@
   }
 
   function normalize(s) {
-    return String(s).toLowerCase().replace(/ё/g, 'е');
+    return String(s).toLowerCase().replace(/ё/g, 'е').replace(/['’ʼ`]/g, '');
   }
 
   // Делит "KickDrum_Hard-01 (Бочка).wav" на ["kick", "drum", "hard", "бочка"].
@@ -141,6 +141,159 @@
       if (prefixOk(t, p) || (lat && prefixOk(lat, p))) hit.add(id);
     }
     return hit;
+  }
+
+  // Словарь переводов для поиска: одно понятие на двух языках. Запрос «dog» найдёт «Лай собаки»,
+  // «дождь» найдёт «Rain_Roof», «лай» найдёт «Dog_Bark». Слова внутри группы равноправны.
+  const SYNONYMS = [
+'dog dogs puppy hound собака собаки пёс пес щенок',
+'bark barking woof лай лает гавкает',
+'cat cats kitten кошка кот котёнок',
+'meow мяу мяуканье нявкання',
+'horse конь лошадь',
+'wolf волк',
+'bird birds птица птицы',
+'growl рычание',
+'roar рёв рык',
+'rain дождь',
+'wind ветер',
+'storm шторм буря гроза',
+'thunder гром',
+'forest woods лес',
+'water вода',
+'river река',
+'sea ocean море океан',
+'waves волны',
+'fire огонь костёр костер',
+'night ночь',
+'morning утро',
+'city town город',
+'street улица',
+'traffic трафик пробка',
+'crowd people толпа люди',
+'snow снег',
+'ice лёд лед',
+'footsteps footstep steps step шаги шаг',
+'door doors дверь двери',
+'glass стекло',
+'metal металл метал',
+'wood wooden дерево деревянный',
+'paper бумага',
+'keys key ключи ключ',
+'cloth clothes fabric одежда ткань',
+'creak squeak скрип',
+'knock стук',
+'car cars машина автомобиль',
+'engine motor двигатель мотор',
+'train поезд электричка',
+'plane airplane aircraft самолёт самолет',
+'helicopter вертолёт вертолет',
+'gun gunshot shot shots выстрел выстрелы',
+'pistol пистолет',
+'rifle винтовка',
+'reload перезарядка',
+'explosion explode blast взрыв',
+'sword меч',
+'punch удар кулаком',
+'voice голос',
+'vocal vocals vox вокал',
+'choir хор',
+'whisper шёпот шепот',
+'scream shout крик',
+'breath breathing дыхание',
+'laugh laughter смех',
+'talk speech conversation речь разговор',
+'kick бочка',
+'snare малый',
+'clap хлопок хлопки',
+'hihat hat хэт',
+'cymbal crash тарелка',
+'drum drums барабан барабаны ударные',
+'bass бас',
+'pad пэд пад',
+'piano пианино рояль',
+'guitar гитара',
+'strings струнные',
+'violin скрипка',
+'bell bells колокол колокольчик',
+'synth синт синтезатор',
+'chord chords аккорд аккорды',
+'loop loops луп лупы петля',
+'ambient ambience атмосфера эмбиент фон',
+'drone дрон гул',
+'noise шум',
+'click клик',
+'button кнопка',
+'beep писк сигнал',
+'notification уведомление',
+'whoosh swoosh swish свуш вжух',
+'riser райзер нарастание',
+'impact hit удар импакт',
+'glitch глитч',
+'laser лазер',
+'robot робот',
+'magic магия',
+'space космос',
+'monster монстр чудовище',
+'heart сердце',
+'phone телефон',
+'clock часы',
+'kitchen кухня',
+'office офис',
+  ];
+
+  const synIndex = new Map(); // форма -> индекс группы
+  const synPrefixes = []; // [основа, индекс группы] для склонений
+  const synGroups = SYNONYMS.map((line, gi) => {
+    const words = line.split(' ').map((w) => w.replace(/ё/g, 'е')).filter(Boolean);
+    for (const w of words) {
+      synIndex.set(w, gi);
+      if (CYR.test(w)) {
+        synIndex.set(translit(w), gi);
+        const st = ruStem(w);
+        if (st.length >= 3 && st !== w) synPrefixes.push([st, gi]);
+      }
+    }
+    return words;
+  });
+
+  function synonymGroup(word) {
+    const n = normalize(word);
+    if (synIndex.has(n)) return synIndex.get(n);
+    for (const [st, gi] of synPrefixes) if (prefixOk(n, st)) return gi;
+    // Английское множественное число: barks -> bark, glasses -> glass.
+    if (/^[a-z]+s$/.test(n)) {
+      if (synIndex.has(n.slice(0, -1))) return synIndex.get(n.slice(0, -1));
+      if (n.endsWith('es') && synIndex.has(n.slice(0, -2))) return synIndex.get(n.slice(0, -2));
+    }
+    return -1;
+  }
+
+  // Формы для поиска по токенам: русские и украинские слова берём основой, чтобы ловить падежи.
+  function synonymForms(word) {
+    const gi = synonymGroup(word);
+    if (gi < 0) return [];
+    const out = new Set();
+    for (const w of synGroups[gi]) {
+      if (w.includes(' ')) continue;
+      if (CYR.test(w)) {
+        const st = ruStem(w);
+        out.add(st.length >= 3 ? st : w);
+      } else out.add(w);
+    }
+    return [...out];
+  }
+
+  // Слитные запросы: «dogbark» -> ["dog", "bark"], «rainroof» -> ["rain", "roof"].
+  function splitCompound(word) {
+    const n = normalize(word);
+    if (n.length < 5 || synonymGroup(n) >= 0 || exact.has(n)) return null;
+    const known = (w) => synIndex.has(w) || exact.has(w);
+    for (let i = n.length - 2; i >= 2; i--) {
+      const a = n.slice(0, i), b = n.slice(i);
+      if (known(a) && (known(b) || splitCompound(b))) return [a].concat(known(b) ? [b] : splitCompound(b));
+    }
+    return null;
   }
 
   // Ищет BPM: "120bpm", "bpm_120", "120 BPM", "_120_" в лупах.
@@ -276,5 +429,7 @@
     detectKey,
     categoriesForQueryWord,
     searchForms,
+    synonymForms,
+    splitCompound,
   };
 });

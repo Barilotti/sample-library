@@ -252,6 +252,7 @@ kbd {
 .chip-active button:hover { color: var(--fg); background: var(--hover); }
 .filters .spacer { flex: 1; }
 .result-count { color: var(--muted); font-size: 13px; }
+.result-count .partial { color: var(--accent); }
 .result-count b { color: var(--fg); font-weight: 500; font-family: var(--font-data); }
 
 /* ---------- Список ---------- */

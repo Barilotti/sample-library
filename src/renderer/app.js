@@ -33,6 +33,9 @@
     for (const it of items) {
       const base = C.normalize(it.name + ' ' + it.rel.replace(/[\\/]/g, ' '));
       it._hay = base + ' ' + C.translit(base);
+      // Токены с пробелом впереди: " лай собаки" — чтобы слово из словаря ловилось с начала слова.
+      const toks = C.tokenize(it.name + ' ' + it.rel.replace(/[\\/]/g, ' ')).join(' ');
+      it._tok = ' ' + toks + ' ' + C.translit(toks);
       it._nameN = C.normalize(it.name);
       it._key = normKey(it.key);
     }
@@ -81,9 +84,34 @@
     for (const w of q.split(/\s+/)) {
       const n = C.normalize(w).replace(/^[^\wа-я#]+|[^\wа-я#]+$/g, '');
       if (!n) continue;
-      words.push({ forms: C.searchForms(n), cats: C.categoriesForQueryWord(n) });
+      // Слитное «dogbark» ищем как «dog bark».
+      for (const part of C.splitCompound(n) || [n]) {
+        words.push({
+          raw: part,
+          forms: C.searchForms(part),
+          syn: C.synonymForms(part).map((f) => ' ' + f),
+          cats: C.categoriesForQueryWord(part),
+        });
+      }
     }
     return { words, bpm };
+  }
+
+  function wordScore(it, c, w) {
+    let s = 0;
+    for (const form of w.forms) {
+      // Короткие слова ищем только с начала слова, иначе «cat» найдёт «Notification».
+      if (form.length < 5) {
+        if (it._nameN.startsWith(form)) s = Math.max(s, 4);
+        else if (it._tok.includes(' ' + form)) s = Math.max(s, 3);
+      } else if (it._nameN.includes(form)) s = Math.max(s, it._nameN.startsWith(form) ? 4 : 3);
+      else if (it._hay.includes(form)) s = Math.max(s, 2);
+    }
+    if (s) return s;
+    // Перевод: «dog» находит «Лай собаки», «дождь» находит «Rain_Roof».
+    for (const f of w.syn) if (it._tok.includes(f)) return 2.5;
+    if (w.cats.size && (w.cats.has(c.cat) || (c.sub && w.cats.has(c.sub)))) return 1.5;
+    return 0;
   }
 
   function computeFiltered() {
@@ -92,7 +120,11 @@
     const pq = parseQuery(f.q);
     const recentIdx = v.lib === 'recent' ? new Map(state.recent.map((p, i) => [p, i])) : null;
     const [dMin, dMax] = f.dur ? f.dur.split('-').map((x) => (x === '' ? Infinity : +x)) : [null, null];
-    const out = [];
+    const nWords = pq.words.length;
+    let out = [];
+    const partial = [];
+    const cand = [];
+    const strong = [];
 
     for (const it of state.items) {
       if (v.lib === 'fav' && !state.favorites.has(it.path)) continue;
@@ -108,21 +140,34 @@
       if (f.key && it._key !== f.key) continue;
       if (dMin != null && (it.duration == null || it.duration < dMin || it.duration >= dMax)) continue;
 
+      const ws = pq.words.map((w, i) => {
+        const sc = wordScore(it, c, w);
+        if (sc > 1.5) strong[i] = true;
+        return sc;
+      });
+      it._ws = ws;
+      cand.push(it);
+    }
+
+    // Совпадение только по категории считаем, лишь если слово не нашлось ни в одном названии:
+    // «rain» должен дать дожди, а не всю природу.
+    for (const it of cand) {
       let score = 0;
-      let ok = true;
-      for (const w of pq.words) {
-        let s = 0;
-        for (const form of w.forms) {
-          if (it._nameN.includes(form)) { s = Math.max(s, it._nameN.startsWith(form) ? 4 : 3); }
-          else if (it._hay.includes(form)) s = Math.max(s, 2);
-        }
-        if (!s && w.cats.size && (w.cats.has(c.cat) || (c.sub && w.cats.has(c.sub)))) s = 1.5;
-        if (!s) { ok = false; break; }
-        score += s;
-      }
-      if (!ok) continue;
+      let hits = 0;
+      it._ws.forEach((sc, i) => {
+        if (sc > 1.5 || (sc && !strong[i])) { hits++; score += sc; }
+      });
       it._score = score;
-      out.push(it);
+      it._hits = hits;
+      if (hits === nWords) out.push(it);
+      else if (hits > 0) partial.push(it);
+    }
+
+    // Если все слова сразу не нашлись (опечатка, лишнее слово), показываем частичные совпадения.
+    state.partial = false;
+    if (!out.length && partial.length && nWords > 1) {
+      out = partial;
+      state.partial = true;
     }
 
     const key = state.sort.key;
@@ -133,11 +178,12 @@
     else if (key === 'bpm' || key === 'duration') out.sort((a, b) => dir * ((a[key] ?? 1e9) - (b[key] ?? 1e9)));
     else if (key === 'key') out.sort((a, b) => dir * String(a._key || 'Я').localeCompare(String(b._key || 'Я')));
     else if (recentIdx) out.sort((a, b) => recentIdx.get(a.path) - recentIdx.get(b.path));
-    else if (pq.words.length) out.sort((a, b) => b._score - a._score || coll.compare(a.name, b.name));
+    else if (pq.words.length) out.sort((a, b) => b._hits - a._hits || b._score - a._score || coll.compare(a.name, b.name));
     else out.sort((a, b) => coll.compare(a.rel, b.rel));
 
     state.filtered = out;
     state.highlight = pq.words.map((w) => w.forms[0]);
+    state.unmatched = state.partial ? pq.words.filter((w, i) => !out.some((it) => it._ws[i])).map((w) => w.raw) : [];
   }
 
   const sepOf = (p) => (p.includes('\\') ? '\\' : '/');
@@ -232,7 +278,8 @@
     if (v.cat) chips += `<span class="chip-active"><span class="dot" style="--cat:${catColor(v.cat)}"></span>${esc(catLabel({ cat: v.cat, sub: v.sub }))}<button data-clear="cat" aria-label="Убрать категорию">${ICONS.remove}</button></span> `;
     if (v.folder) chips += `<span class="chip-active">${ICONS.folder}${esc(shortPath(v.folder))}<button data-clear="folder" aria-label="Убрать папку">${ICONS.remove}</button></span>`;
     $('f-active').innerHTML = chips;
-    $('result-count').innerHTML = `<b>${fmtCount(state.filtered.length)}</b> ${plural(state.filtered.length, 'звук', 'звука', 'звуков')}`;
+    $('result-count').innerHTML = `<b>${fmtCount(state.filtered.length)}</b> ${plural(state.filtered.length, 'звук', 'звука', 'звуков')}`
+      + (state.partial ? ` <span class="partial" title="Все слова сразу не нашлись, показаны звуки, где есть хотя бы одно">· частичные совпадения${state.unmatched.length ? ', не найдено: «' + esc(state.unmatched.join('», «')) + '»' : ''}</span>` : '');
 
     for (const b of $('list-head').querySelectorAll('[data-sort]')) {
       const on = state.sort.key === b.dataset.sort;

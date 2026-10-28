@@ -54,3 +54,15 @@ test('тип: луп, ваншот, длинный', () => {
   assert.strictEqual(C.classify(['Kick.wav'], 0.4).type, 'oneshot');
   assert.strictEqual(C.classify(['Атмосферы', 'Гул.wav'], 60).type, 'long');
 });
+
+test('перевод запросов RU/EN и слитные слова', () => {
+  assert.ok(C.synonymForms('dog').includes('собак'));
+  assert.ok(C.synonymForms('dogs').includes('собак'));
+  assert.ok(C.synonymForms('bark').includes('лай'));
+  assert.ok(C.synonymForms('дождь').includes('rain'));
+  assert.ok(C.synonymForms('шаги').includes('footsteps'));
+  assert.deepStrictEqual(C.synonymForms('docs'), []);
+  assert.deepStrictEqual(C.splitCompound('dogbark'), ['dog', 'bark']);
+  assert.deepStrictEqual(C.splitCompound('kickdrum'), ['kick', 'drum']);
+  assert.strictEqual(C.splitCompound('notification'), null);
+});
