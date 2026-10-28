@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; media-src 'self' file: blob:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; script-src 'self' file:">
+<title>Сэмплотека</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--APP-->
+<div class="app" id="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="brand-name">Сэмплотека</span>
+      <button class="icon-btn brand-theme" id="btn-theme" title="Тема" aria-label="Тема">
+        <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3.5a6.5 6.5 0 010 13z" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="side-scroll">
+      <nav class="side-group" id="nav-lib" aria-label="Библиотека"></nav>
+      <nav class="side-group" aria-label="Категории">
+        <div class="side-label">Категории</div>
+        <div id="nav-cats"></div>
+      </nav>
+      <nav class="side-group" aria-label="Папки">
+        <div class="side-label">Папки <button id="btn-rescan-all" title="Проверить все папки на новые файлы">Обновить</button></div>
+        <div id="nav-folders"></div>
+        <button class="add-folder" id="btn-add-folder">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Добавить папку
+        </button>
+      </nav>
+    </div>
+    <div class="scan-box" id="scan-box" hidden>
+      <div class="scan-row"><span id="scan-title">Сканирую</span><b class="mono" id="scan-count"></b></div>
+      <div class="meter" id="scan-meter"><i></i></div>
+      <div class="scan-file" id="scan-file"></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="demo-banner" id="demo-banner" hidden></div>
+    <div class="toolbar">
+      <label class="search">
+        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input id="q" type="search" placeholder="Поиск: бочка, kick, дождь, riser, 120 bpm…" autocomplete="off" spellcheck="false" aria-label="Поиск по звукам">
+        <span class="hint"><kbd>Ctrl</kbd><kbd>F</kbd></span>
+      </label>
+      <div class="filters">
+        <div class="seg" id="f-type" role="group" aria-label="Тип звука">
+          <button data-v="" class="on">Все</button>
+          <button data-v="oneshot">Ваншоты</button>
+          <button data-v="loop">Лупы</button>
+          <button data-v="long">Длинные</button>
+        </div>
+        <label class="pill" id="f-bpm-pill" title="Темп, удары в минуту">BPM
+          <input id="f-bpm-min" type="number" min="40" max="300" placeholder="от" aria-label="BPM от">
+          <span class="sep">–</span>
+          <input id="f-bpm-max" type="number" min="40" max="300" placeholder="до" aria-label="BPM до">
+        </label>
+        <label class="pill" id="f-key-pill">Тональность
+          <select id="f-key" aria-label="Тональность"><option value="">любая</option></select>
+        </label>
+        <label class="pill" id="f-dur-pill">Длина
+          <select id="f-dur" aria-label="Длительность">
+            <option value="">любая</option>
+            <option value="0-1">до 1 с</option>
+            <option value="1-5">1–5 с</option>
+            <option value="5-30">5–30 с</option>
+            <option value="30-120">30 с – 2 мин</option>
+            <option value="120-">больше 2 мин</option>
+          </select>
+        </label>
+        <span id="f-active"></span>
+        <span class="spacer"></span>
+        <span class="result-count" id="result-count"></span>
+      </div>
+    </div>
+    <div class="list-head" id="list-head">
+      <span></span>
+      <button data-sort="name">Название</button>
+      <button data-sort="cat" class="c-cat">Категория</button>
+      <span class="c-type">Тип</span>
+      <span class="num c-bpm"><button data-sort="bpm">BPM</button></span>
+      <span class="num c-key"><button data-sort="key">Тон</button></span>
+      <span class="num"><button data-sort="duration">Длина</button></span>
+      <span class="c-fmt">Формат</span>
+      <span></span>
+    </div>
+    <div class="list" id="list" tabindex="0" aria-label="Список звуков">
+      <div class="list-inner" id="list-inner"></div>
+      <div class="empty" id="empty" hidden></div>
+    </div>
+  </main>
+
+  <footer class="player" id="player">
+    <div class="p-info">
+      <button class="p-play" id="p-play" disabled aria-label="Воспроизвести">
+        <svg id="p-icon" width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l11 6-11 6z" fill="currentColor"/></svg>
+      </button>
+      <div class="p-meta">
+        <div class="p-name" id="p-name">Выберите звук</div>
+        <div class="p-cat" id="p-cat-wrap" hidden><span class="dot" id="p-dot"></span><select id="p-cat" aria-label="Категория звука" disabled></select></div>
+      </div>
+    </div>
+    <div class="p-wave">
+      <div class="crumbs" id="p-crumbs"></div>
+      <div class="wave-box" id="wave-box">
+        <canvas id="wave"></canvas>
+        <div class="wave-msg" id="wave-msg">Стрелки ↑ ↓ переключают звуки, пробел — пауза</div>
+      </div>
+      <div class="wave-time mono"><span id="t-cur">0:00.0</span><span id="t-dur"></span></div>
+    </div>
+    <div class="p-side">
+      <dl class="facts" id="facts"></dl>
+      <div class="p-actions">
+        <div class="drag-out" id="drag-out" draggable="true" hidden title="Перетащите в DAW, Premiere, Reaper или папку">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3h1M10 3h1M5 8h1M10 8h1M5 13h1M10 13h1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Тащите в DAW
+        </div>
+        <div class="p-actions-row">
+          <button class="icon-btn" id="p-fav" title="В избранное (F)" aria-label="В избранное" disabled>
+            <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="icon-btn" id="p-reveal" title="Показать в папке" aria-label="Показать в папке" disabled>
+            <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5h5l1.5 2h8.5v8.5h-15z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </button>
+          <label class="vol" title="Громкость">
+            <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-3.5v11L6 12H3z" fill="currentColor"/><path d="M13.5 7a4 4 0 010 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8" aria-label="Громкость">
+          </label>
+        </div>
+        <label class="toggle"><input type="checkbox" id="autoplay" checked> Играть при выборе</label>
+      </div>
+    </div>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<!--/APP-->
+<script src="../shared/categorize.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
