@@ -22,7 +22,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Собрать .dmg и .zip (одна сборка для Apple Silicon и Intel)
-        run: npx electron-builder --mac dmg zip --universal --publish never
+        run: |
+          npx electron-builder --mac dir --universal --publish never
+          codesign --force --deep --sign - dist/mac-universal/Sampleteka.app
+          npx electron-builder --mac dmg zip --universal --publish never --prepackaged dist/mac-universal/Sampleteka.app
       - name: Проверить подпись
         run: |
           for app in dist/mac*/Sampleteka.app; do
