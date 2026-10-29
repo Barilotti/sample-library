@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   getLibrary: () => ipcRenderer.invoke('library:get'),
   pickFolder: () => ipcRenderer.invoke('library:pickFolder'),
   addFolder: (p) => ipcRenderer.invoke('library:addFolder', p),
@@ -21,7 +22,7 @@ contextBridge.exposeInMainWorld('api', {
   readFile: (p) => ipcRenderer.invoke('file:read', p),
   reveal: (p) => ipcRenderer.invoke('file:reveal', p),
   startDrag: (paths) => ipcRenderer.send('file:startDrag', paths),
-  // Путь папки, которую перетащили из Проводника в окно.
+  // Путь папки, которую перетащили из Проводника или Finder в окно.
   pathForFile: (file) => webUtils.getPathForFile(file),
   onScanProgress: (cb) => ipcRenderer.on('scan:progress', (_e, p) => cb(p)),
   onLibraryChanged: (cb) => ipcRenderer.on('library:changed', (_e, s) => cb(s)),

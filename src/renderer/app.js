@@ -7,7 +7,13 @@
   const $ = (id) => document.getElementById(id);
   const ROW_H = 52;
   const isDemo = !window.api;
+  const isMac = window.api ? window.api.platform === 'darwin' : /Mac/.test(navigator.platform);
   const backend = window.api ? electronBackend(window.api) : DemoBackend.create();
+  if (isMac) {
+    document.documentElement.classList.add('mac');
+    const k = document.querySelector('.search .hint kbd, .hint kbd');
+    if (k) k.textContent = '⌘';
+  }
 
   const typeLabel = (t) => ({ oneshot: tr('typeOneshot'), loop: tr('typeLoop'), long: tr('typeLong') }[t] || '—');
   const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -394,7 +400,7 @@
         <h2>${tr('emptyAddTitle')}</h2>
         <p>${tr('emptyAddText')}</p>
         <button class="btn-primary" data-action="add">${ICONS.folder} ${tr('pickFolder')}</button>
-        <span class="drop-hint">${tr('dropHint')}</span></div>`;
+        <span class="drop-hint">${tr(isMac ? 'dropHintMac' : 'dropHint')}</span></div>`;
     } else if (state.items.length === 0) {
       e.innerHTML = `<div class="empty-card"><h2>${tr('emptyScanTitle')}</h2><p>${tr('emptyScanText')}</p></div>`;
     } else if (state.view.lib === 'fav' && !state.filters.q) {

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, nativeTheme } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeImage, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
@@ -134,7 +134,11 @@ async function addFolder(folder) {
 
 // ---------- Иконка для перетаскивания в DAW ----------
 
+const IS_MAC = process.platform === 'darwin';
+
 function makeDragIcon() {
+  // На Mac порядок байт в картинке другой, поэтому берём уменьшенную иконку приложения.
+  if (IS_MAC) return nativeImage.createFromPath(path.join(__dirname, 'icon.png')).resize({ width: 32, height: 32 });
   // Маленькая "волна" 32x32 в BGRA, чтобы не таскать файл картинки.
   const w = 32, h = 32;
   const buf = Buffer.alloc(w * h * 4);
@@ -169,7 +173,8 @@ function createWindow() {
       sandbox: false,
     },
   });
-  win.removeMenu();
+  // На Windows меню не нужно. На Mac без него не работают Cmd+C/V/Q и пропадает меню приложения.
+  if (!IS_MAC) win.removeMenu();
   win.once('ready-to-show', () => win.show());
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   // Ссылки наружу открываем в браузере, а не внутри приложения.
@@ -337,7 +342,20 @@ app.whenReady().then(() => {
   ipcMain.handle('file:reveal', (_e, p) => shell.showItemInFolder(p));
   ipcMain.handle('file:exists', (_e, p) => fs.existsSync(p));
 
+  if (IS_MAC) {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      { role: 'editMenu' },
+      { role: 'windowMenu' },
+    ]));
+  }
+
   createWindow();
+
+  // На Mac приложение остаётся в Dock после закрытия окна; клик по иконке открывает окно снова.
+  app.on('activate', () => {
+    if (!BrowserWindow.getAllWindows().length) createWindow();
+  });
 
   // При запуске тихо проверяем изменения в папках.
   if (lib.folders.length) setTimeout(() => scanRoots(lib.folders.map((f) => f.path)), 1500);
@@ -345,5 +363,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   saveStore(true);
-  app.quit();
+  if (!IS_MAC) app.quit();
 });
+
+app.on('before-quit', () => saveStore(true));

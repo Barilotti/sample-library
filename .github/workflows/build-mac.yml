@@ -1,0 +1,51 @@
+name: Сборка под macOS
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Собрать .dmg и .zip (Apple Silicon и Intel)
+        run: npx electron-builder --mac dmg zip --arm64 --x64 --publish never
+      - name: Проверить подпись
+        run: |
+          for app in dist/mac*/Sampleteka.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -dv "$app" 2>&1 | grep -E 'Signature|Identifier'
+          done
+      - name: Запустить сборку и проверить, что всё работает
+        run: |
+          npm install --no-save playwright@1.63.0
+          node scripts/smoke-test.js dist/mac-arm64/Sampleteka.app/Contents/MacOS/Sampleteka dist/smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Sampleteka-macOS
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/smoke/*.png
+          if-no-files-found: error
+      - name: Выложить релиз (для тегов v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.zip

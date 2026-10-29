@@ -41,9 +41,9 @@
   --c-other: #7d8596;
   --c-user: #5b9dff;
 
-  --font-display: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Unbounded', 'Segoe UI', -apple-system, system-ui, sans-serif;
   --font-body: 'Golos Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-data: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+  --font-data: 'JetBrains Mono', 'Cascadia Mono', Consolas, Menlo, monospace;
 
   --row-h: 52px;
   --radius: 8px;
