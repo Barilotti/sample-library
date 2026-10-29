@@ -115,7 +115,18 @@
     return rest.length <= 4;
   }
 
+  const tokenCache = new Map();
   function categoriesForToken(token) {
+    let hit = tokenCache.get(token);
+    if (!hit) {
+      hit = categoriesForTokenRaw(token);
+      if (tokenCache.size > 50000) tokenCache.clear();
+      tokenCache.set(token, hit);
+    }
+    return hit;
+  }
+
+  function categoriesForTokenRaw(token) {
     const t = normalize(token);
     const hit = new Set(exact.get(t) || []);
     const lat = CYR.test(t) ? translit(t) : null;
@@ -358,6 +369,15 @@
     cartoon: { 'animals': 'cartoon.toons', 'human.screams': 'cartoon.memes', 'human.speech': 'cartoon.memes' },
   };
 
+  const UCS_LOWER = new Set(Object.keys(Tax.UCS).map((k) => k.toLowerCase()));
+  // «weapswrd», «scimisc»: код UCS из начала имени, а не слово.
+  function isUcsCode(tok) {
+    const m = /^([a-z]{2,7}?)([a-z]{2,8})?$/.exec(tok);
+    if (!m) return false;
+    for (let i = 2; i <= Math.min(7, tok.length); i++) if (UCS_LOWER.has(tok.slice(0, i))) return true;
+    return false;
+  }
+
   function ucsCategory(fileName) {
     const m = /^([A-Z]{2,7}?)([A-Z][a-z]{1,8})?_/.exec(fileName);
     if (!m) return null;
@@ -371,7 +391,22 @@
 
   // Очки одного куска пути: фразы сильнее отдельных слов, а слова, вошедшие во фразу,
   // второй раз не считаются («торговый автомат» — это не оружие).
-  function scoreText(text, weight) {
+  // Ключ выученного слова: русские слова по основе («гидрофона» = «гидрофон»), английские без -s.
+  function learnKey(word) {
+    const n = normalize(word);
+    if (CYR.test(n)) return ruStem(n);
+    return n.length > 4 && /[^s]s$/.test(n) ? n.slice(0, -1) : n;
+  }
+
+  // Слово уже есть в словаре категорий (или это служебное слово вроде hit, loop, sound).
+  function isKnownWord(word) {
+    const n = normalize(word);
+    return WEAK.has(n) || categoriesForToken(n).size > 0;
+  }
+
+  // ctx.words — выученные слова: ключ -> { id, mult }. Своя категория пользователя приходит
+  // сюда же с огромным множителем, чтобы её слова всегда побеждали.
+  function scoreText(text, weight, ctx) {
     const out = new Map();
     const put = (id, w) => { if ((out.get(id) || 0) < w) out.set(id, w); };
     let n = ' ' + normalize(stripVendors(text)).replace(/[_\-.,()[\]]+/g, ' ').replace(/\s+/g, ' ') + ' ';
@@ -386,6 +421,10 @@
     for (const tok of tokenize(n)) {
       const w = WEAK.has(tok) ? weight * 0.4 : weight;
       for (const id of categoriesForToken(tok)) put(id, w);
+      if (ctx && ctx.words) {
+        const hit = ctx.words.get(learnKey(tok));
+        if (hit) put(hit.id, weight * hit.mult);
+      }
     }
     return out;
   }
@@ -393,7 +432,7 @@
   // Главная функция: путь относительно корня библиотеки -> категория, тип, BPM, тональность.
   // segments: ["Weapons", "Guns", "Rifle_Shot_01.wav"], последний элемент — имя файла.
   // Имя файла важнее всего, ближайшая папка — меньше, название пака — меньше всего.
-  function classify(segments, durationSec) {
+  function classify(segments, durationSec, ctx) {
     const fileName = segments[segments.length - 1];
     const folders = segments.slice(0, -1);
     const own = new Map();
@@ -406,13 +445,13 @@
       add(topOf(ucs), 6);
       if (ucs.includes('.')) add(ucs, 6);
     }
-    for (const [id, w] of scoreText(fileName, 4)) {
+    for (const [id, w] of scoreText(fileName, 4, ctx)) {
       add(id, w);
       fromFile.set(topOf(id), Math.max(fromFile.get(topOf(id)) || 0, w));
     }
     folders.forEach((f, i) => {
       const weight = 1 + (i + 1) / folders.length; // от 1 (корень) до 2 (ближайшая)
-      for (const [id, w] of scoreText(f, weight)) {
+      for (const [id, w] of scoreText(f, weight, ctx)) {
         add(id, w);
         const top = topOf(id);
         if (GENRE.has(top) && w >= weight) genre.set(top, 3);
@@ -454,7 +493,7 @@
     else if (durationSec != null && durationSec >= 20) type = 'long';
     else type = durationSec != null ? 'oneshot' : 'unknown';
 
-    return { cat: best, sub, type, bpm, key: detectKey(fileName, MELODIC.has(best)) };
+    return { cat: best, sub, type, bpm, key: detectKey(fileName, MELODIC.has(best)), score: bestScore };
   }
 
   // Название категории на нужном языке.
@@ -483,6 +522,11 @@
     BY_ID,
     labelOf,
     classify,
+    learnKey,
+    isUcsCode,
+    isKnownWord,
+    stripVendors,
+    WEAK,
     tokenize,
     translit,
     normalize,

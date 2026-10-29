@@ -212,6 +212,7 @@ async function scanFolder(root, { previous = new Map(), onProgress = () => {}, s
           const info = { duration: prev.duration, sampleRate: prev.sampleRate, bits: prev.bits, channels: prev.channels };
           const fresh = buildItem(root, file, st, info);
           items[i] = { ...fresh, bpm: prev.bpm || fresh.bpm, key: prev.key || fresh.key };
+          if (prev.ai) items[i].ai = prev.ai; // результат нейросети зависит только от звука
         } else {
           items[i] = prev;
         }

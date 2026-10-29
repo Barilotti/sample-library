@@ -1,4 +1,4 @@
-/* global Categorize, DemoBackend, I18n */
+/* global Categorize, DemoBackend, I18n, Listen, Learn */
 'use strict';
 
 (function () {
@@ -18,6 +18,8 @@
     folders: [],
     favorites: new Set(),
     overrides: {},
+    custom: [], // свои категории пользователя
+    learned: [], // выученные слова
     recent: [],
     settings: { autoplay: true, volume: 0.8 },
     view: { lib: 'all', cat: null, sub: null, folder: null },
@@ -32,7 +34,9 @@
 
   function prepare(items) {
     for (const it of items) {
-      const base = C.normalize(it.name + ' ' + it.rel.replace(/[\\/]/g, ' '));
+      // Что услышала нейросеть, тоже ищется: «dog» найдёт и «rec_0042», если там лай.
+      const heard = it.ai && it.ai.labels ? ' ' + it.ai.labels.map((l) => l[0]).join(' ') : '';
+      const base = C.normalize(it.name + ' ' + it.rel.replace(/[\\/]/g, ' ') + heard);
       it._hay = base + ' ' + C.translit(base);
       // Токены с пробелом впереди: " лай собаки" — чтобы слово из словаря ловилось с начала слова.
       const toks = C.tokenize(it.name + ' ' + it.rel.replace(/[\\/]/g, ' ')).join(' ');
@@ -52,11 +56,16 @@
     return note + (m[3] ? 'm' : '');
   }
 
+  const customOf = (id) => state.custom.find((c) => c.id === id);
+  const catExists = (id) => !!(C.BY_ID[id] || customOf(id));
+  // Название категории на текущем языке, включая свои категории пользователя.
+  const label = (id) => (customOf(id) ? customOf(id).name : C.labelOf(id, I18n.lang));
+
   // Ручная категория из прошлой версии могла указывать на удалённый раздел: тогда берём автоматическую.
   function catOf(it) {
     const o = state.overrides[it.path];
-    if (o && C.BY_ID[o.cat] && (!o.sub || C.BY_ID[o.sub])) return o;
-    return C.BY_ID[it.cat] ? it : { cat: 'other', sub: null };
+    if (o && catExists(o.cat) && (!o.sub || C.BY_ID[o.sub])) return o;
+    return catExists(it.cat) ? it : { cat: 'other', sub: null };
   }
 
   function applySnapshot(s) {
@@ -64,6 +73,8 @@
     state.folders = s.folders || [];
     state.favorites = new Set(s.favorites || []);
     state.overrides = s.overrides || {};
+    state.custom = s.custom || [];
+    state.learned = s.learned || [];
     state.recent = s.recent || [];
     state.settings = { ...state.settings, ...(s.settings || {}) };
     if (!isDemo) applyTheme(state.settings.theme || 'system');
@@ -72,6 +83,8 @@
     $('vol').value = state.settings.volume ?? 0.8;
     player.setVolume(+$('vol').value);
     renderAll(true);
+    if ($('learn-dlg').open) renderLearn();
+    maybeListen();
   }
 
   // ---------- Поиск и фильтры ----------
@@ -196,11 +209,10 @@
 
   function catLabel(c) {
     const id = c.sub || c.cat;
-    const def = C.BY_ID[id];
-    if (!def) return tr('uncategorized');
-    return c.sub ? C.labelOf(c.cat, I18n.lang) + ' › ' + C.labelOf(id, I18n.lang) : C.labelOf(id, I18n.lang);
+    if (!catExists(id)) return tr('uncategorized');
+    return c.sub ? label(c.cat) + ' › ' + label(id) : label(id);
   }
-  const catColor = (id) => `var(--c-${id || 'other'})`;
+  const catColor = (id) => (id && id.startsWith('user-') ? 'var(--c-user)' : `var(--c-${id || 'other'})`);
 
   function counts() {
     const cat = {};
@@ -245,12 +257,12 @@
       .join('');
 
     const cnt = counts();
-    const tops = C.CATEGORIES.filter((c) => !c.parent && cnt.cat[c.id]);
+    const tops = C.CATEGORIES.filter((c) => !c.parent && cnt.cat[c.id]).concat(state.custom.filter((c) => cnt.cat[c.id]));
     tops.sort((a, b) => (a.id === 'other') - (b.id === 'other') || cnt.cat[b.id] - cnt.cat[a.id]);
     let html = '';
     for (const c of tops) {
       const active = v.cat === c.id && !v.sub;
-      html += `<button class="nav-item${active ? ' active' : ''}" data-cat="${c.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(C.labelOf(c.id, I18n.lang))}</span><span class="count">${fmtCount(cnt.cat[c.id])}</span></button>`;
+      html += `<button class="nav-item${active ? ' active' : ''}" data-cat="${c.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(label(c.id))}</span><span class="count">${fmtCount(cnt.cat[c.id])}</span></button>`;
       if (v.cat === c.id || state.expanded.has(c.id)) {
         const subs = C.CATEGORIES.filter((s) => s.parent === c.id && cnt.sub[s.id]);
         subs.sort((a, b) => cnt.sub[b.id] - cnt.sub[a.id]);
@@ -339,7 +351,7 @@
     const fav = state.favorites.has(it.path);
     const playing = player.path === it.path && player.playing;
     const folder = it.rel.split(/[\\/]/).slice(0, -1).join(' / ');
-    const sub = C.labelOf(c.sub || c.cat, I18n.lang);
+    const sub = label(c.sub || c.cat);
     return `<div class="row${i === state.sel ? ' sel' : ''}${playing ? ' playing' : ''}" style="top:${i * ROW_H}px" data-i="${i}" draggable="true">
       <button class="play" data-play="${i}" tabindex="-1" aria-label="${tr('listen')}">${playing ? ICONS.pause : ICONS.play}</button>
       <div class="title"><span class="name">${highlight(it.name)}</span><span class="path">${esc(folder || '—')}</span></div>
@@ -666,11 +678,14 @@
       const tl = esc(C.labelOf(top.id, I18n.lang));
       opts += `<optgroup label="${tl}"><option value="${top.id}|">${tl}</option>${subs.map((s) => `<option value="${top.id}|${s.id}">${tl} › ${esc(C.labelOf(s.id, I18n.lang))}</option>`).join('')}</optgroup>`;
     }
+    if (state.custom.length) {
+      opts = `<optgroup label="${esc(tr('myCats'))}">${state.custom.map((u) => `<option value="${u.id}|">${esc(u.name)}</option>`).join('')}</optgroup>` + opts;
+    }
     const manual = state.overrides[it.path];
     if (manual) opts = `<option value="__auto">${tr('autoCat')}</option>` + opts;
     cat.innerHTML = opts;
     cat.value = c.cat + '|' + (c.sub || '');
-    cat.title = manual ? tr('catManual') : tr('catAuto');
+    cat.title = manual ? tr('catManual') : it.how === 'audio' ? tr('catByAudio') : it.how === 'folder' ? tr('catByFolder') : tr('catAuto');
 
     const isFav = state.favorites.has(it.path);
     fav.classList.toggle('on', isFav);
@@ -691,11 +706,12 @@
 
     const facts = [
       [tr('colLen'), fmtDur(player.duration || it.duration)],
-      [tr('tempo'), it.bpm ? it.bpm + ' BPM' : '—'],
-      [tr('colKey'), it._key || '—'],
+      it.bpm ? [tr('tempo'), it.bpm + ' BPM'] : null,
+      it._key ? [tr('colKey'), it._key] : null,
       [tr('format'), fmtFormat(it) + (it.channels ? ' ' + (it.channels === 1 ? tr('mono') : tr('stereo')) : '')],
     ];
-    $('facts').innerHTML = facts.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+    if (it.ai && it.ai.labels && it.ai.labels.length) facts.push([tr('heard'), it.ai.labels.slice(0, 2).map(([n, sc]) => `${n} ${Math.round(sc * 100)}%`).join(', ')]);
+    $('facts').innerHTML = facts.filter(Boolean).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
   }
 
   // ---------- Выбор и навигация ----------
@@ -911,14 +927,21 @@
     const it = player.item;
     if (!it) return;
     const v = e.target.value;
-    if (v === '__auto') state.overrides = await backend.setCategory(it.path, null);
+    let res;
+    if (v === '__auto') res = await backend.setCategory(it.path, null);
     else {
       const [cat, sub] = v.split('|');
-      state.overrides = await backend.setCategory(it.path, cat, sub || null);
+      res = await backend.setCategory(it.path, cat, sub || null);
     }
+    // Демо возвращает только ручные категории, приложение — ещё и чему научилось.
+    state.overrides = res.overrides || res;
     renderAll(true);
     renderPlayerMeta();
-    toast(v === '__auto' ? tr('catBackAuto') : tr('catChanged'));
+    if (v === '__auto') toast(tr('catBackAuto'));
+    else if (res.words && res.words.length) {
+      const [cat, sub] = v.split('|');
+      toast(tr('learnedToast').replace('{w}', res.words.slice(0, 3).join('», «')).replace('{c}', label(sub || cat)).replace('{n}', fmtCount(res.moved || 0)));
+    } else toast(tr('catChanged'));
   });
   $('p-crumbs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-crumb]');
@@ -1030,6 +1053,151 @@
     const b = $('demo-banner');
     b.hidden = false;
     b.innerHTML = tr('demoBanner');
+  }
+
+  // ---------- Обучение: свои категории, выученные слова, нейросеть ----------
+
+  const dlg = $('learn-dlg');
+
+  function renderLearn() {
+    const manual = state.learned.filter((l) => l.source === 'manual');
+    const auto = state.learned.filter((l) => l.source === 'auto');
+    const chip = (l) => `<span class="word-chip" title="${esc(label(l.id))}">${esc(l.word)} <span class="arrow">→</span> ${esc(label(l.id))}<button data-forget="${esc(l.word)}" aria-label="${tr('forget')}" title="${tr('forget')}">${ICONS.remove}</button></span>`;
+    const listenTotal = state.items.length;
+    const listenDone = state.items.filter((it) => it.ai).length;
+    const custom = state.custom.map((c, i) => `<div class="custom-row" data-i="${i}">
+        <span class="dot" style="--cat:var(--c-user)"></span>
+        <input class="in-name" value="${esc(c.name)}" aria-label="${tr('catName')}">
+        <input class="in-words" value="${esc((c.words || []).join(', '))}" aria-label="${tr('catWords')}">
+        <button class="btn-ghost small" data-save="${i}">${tr('save')}</button>
+        <button class="icon-btn" data-del="${i}" aria-label="${tr('delete')}" title="${tr('delete')}">${ICONS.remove}</button>
+      </div>`).join('');
+    $('learn-body').innerHTML = `
+      <section>
+        <h3>${tr('listenTitle')}</h3>
+        <p class="hint">${tr('listenHint')}</p>
+        <label class="toggle big"><input type="checkbox" id="listen-on"${state.settings.listen ? ' checked' : ''}${isDemo ? ' disabled' : ''}> ${tr('listenOn')}</label>
+        <div class="listen-status mono">${listener && listener.error ? esc(tr('listenError') + listener.error) : tr('listenStatus').replace('{done}', fmtCount(listenDone)).replace('{total}', fmtCount(listenTotal))}</div>
+      </section>
+      <section>
+        <h3>${tr('myCats')}</h3>
+        <p class="hint">${tr('myCatsHint')}</p>
+        ${custom}
+        <div class="custom-row new">
+          <span class="dot" style="--cat:var(--c-user)"></span>
+          <input id="new-cat-name" placeholder="${tr('catName')}" aria-label="${tr('catName')}">
+          <input id="new-cat-words" placeholder="${tr('catWordsPh')}" aria-label="${tr('catWords')}">
+          <button class="btn-primary small" id="new-cat-add">${tr('addCat')}</button>
+        </div>
+      </section>
+      <section>
+        <h3>${tr('learnedTitle')}</h3>
+        <p class="hint">${tr('learnedHint')}</p>
+        ${manual.length || auto.length ? '' : `<p class="empty-note">${tr('learnedNone')}</p>`}
+        ${manual.length ? `<h4>${tr('learnedManual')}</h4><div class="chips">${manual.map(chip).join('')}</div>` : ''}
+        ${auto.length ? `<details><summary>${tr('learnedAuto')} · ${fmtCount(auto.length)}</summary><div class="chips">${auto.map(chip).join('')}</div></details>` : ''}
+      </section>`;
+  }
+
+  $('btn-learn').addEventListener('click', () => {
+    renderLearn();
+    dlg.showModal();
+  });
+  $('learn-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+
+  const parseWords = (s) => String(s || '').split(/[,;\n]+/).map((w) => w.trim()).filter(Boolean);
+
+  async function saveCustom(list) {
+    if (!backend.setCustom) { toast(tr('demoNoFolders')); return; }
+    const res = await backend.setCustom(list);
+    toast(tr('customSaved').replace('{n}', fmtCount(res.moved || 0)));
+  }
+
+  $('learn-body').addEventListener('click', async (e) => {
+    const t = e.target;
+    const forget = t.closest('[data-forget]');
+    if (forget) {
+      if (!backend.forget) return;
+      const res = await backend.forget(forget.dataset.forget);
+      toast(tr('wordForgotten').replace('{n}', fmtCount(res.moved || 0)));
+      return;
+    }
+    if (t.id === 'new-cat-add') {
+      const name = $('new-cat-name').value.trim();
+      const words = parseWords($('new-cat-words').value);
+      if (!name || !words.length) { $(name ? 'new-cat-words' : 'new-cat-name').focus(); return; }
+      const id = Learn.customId(name, new Set(state.custom.map((c) => c.id)));
+      await saveCustom(state.custom.concat([{ id, name, words }]));
+      return;
+    }
+    const save = t.closest('[data-save]');
+    if (save) {
+      const row = save.closest('.custom-row');
+      const i = +save.dataset.save;
+      const list = state.custom.map((c, j) => (j === i ? { ...c, name: row.querySelector('.in-name').value.trim() || c.name, words: parseWords(row.querySelector('.in-words').value) } : c));
+      await saveCustom(list);
+      return;
+    }
+    const del = t.closest('[data-del]');
+    if (del) await saveCustom(state.custom.filter((_, j) => j !== +del.dataset.del));
+  });
+
+  $('learn-body').addEventListener('change', async (e) => {
+    if (e.target.id !== 'listen-on') return;
+    state.settings.listen = e.target.checked;
+    await backend.setSettings({ listen: e.target.checked });
+    if (!e.target.checked && listener) listener.stop();
+    maybeListen();
+  });
+
+  // Нейросеть слушает только начало файла: читаем первые секунды, а не весь файл.
+  let decodeCtx = null;
+  async function decodeHead(it, seconds) {
+    if (!decodeCtx) decodeCtx = new OfflineAudioContext(1, 1, 16000);
+    if (/^(wav|wave|aif|aiff|aifc)$/.test(it.ext)) {
+      const perSec = (it.sampleRate || 48000) * (it.channels || 2) * ((it.bits || 24) / 8);
+      const bytes = await backend.readHead(it.path, Math.ceil(perSec * seconds) + 256 * 1024);
+      const pcm = decodePcm(bytes, decodeCtx);
+      if (pcm) return pcm;
+      try { return await decodeCtx.decodeAudioData(bytes); } catch { return null; }
+    }
+    try {
+      return await decodeCtx.decodeAudioData(await backend.readHead(it.path, 3 * 1024 * 1024));
+    } catch {
+      if (it.size > 80 * 1024 * 1024) return null;
+      const all = await backend.readFile(it.path);
+      return all ? decodeCtx.decodeAudioData(all) : null;
+    }
+  }
+
+  const listener = isDemo || !window.Listen ? null : Listen.create({
+    api: backend,
+    decode: decodeHead,
+    onProgress(p) {
+      const box = $('listen-box');
+      box.hidden = p.phase !== 'listening';
+      if (p.phase === 'listening') {
+        $('listen-count').textContent = `${fmtCount(p.done)} / ${fmtCount(p.total)}`;
+        $('listen-meter').style.width = (p.total ? (100 * p.done) / p.total : 0) + '%';
+        $('listen-file').textContent = p.current || '';
+      }
+      if (p.phase === 'error') toast(tr('listenError') + p.error);
+      if (dlg.open && (p.phase !== 'listening' || p.done % 20 === 0)) {
+        const st = dlg.querySelector('.listen-status');
+        if (st) st.textContent = p.phase === 'error' ? tr('listenError') + p.error : tr('listenStatus').replace('{done}', fmtCount(p.done)).replace('{total}', fmtCount(p.total));
+      }
+    },
+  });
+
+  function maybeListen() {
+    if (!listener || !state.settings.listen || listener.running || listener.error) return;
+    if (!state.items.some((it) => !it.ai)) return;
+    // Небольшая пауза, чтобы не мешать сканированию и первому показу списка.
+    clearTimeout(maybeListen.t);
+    maybeListen.t = setTimeout(() => {
+      if (state.settings.listen && !listener.running) listener.run(state.items.slice());
+    }, 2500);
   }
 
   // ---------- Мост к Electron ----------

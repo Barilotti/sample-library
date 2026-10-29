@@ -6,6 +6,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const { scanFolder } = require('./scanner');
 const { RULES_VERSION } = require('../shared/categorize');
+const Learn = require('../shared/learn');
 
 const MAX_DECODE_BYTES = 80 * 1024 * 1024;
 
@@ -23,8 +24,11 @@ let lib = {
   items: [],
   favorites: [], // пути
   overrides: {}, // путь -> { cat, sub } — ручная смена категории
+  custom: [], // свои категории: [{ id, name, words: [] }]
+  forgotten: [], // выученные слова, которые человек велел забыть
+  learned: [], // что приложение выучило (пересчитывается)
   recent: [], // последние прослушанные пути
-  settings: { theme: 'system', autoplay: true, volume: 0.8 },
+  settings: { theme: 'system', autoplay: true, volume: 0.8, listen: false },
 };
 
 function loadStore() {
@@ -47,6 +51,14 @@ function saveStore(immediate) {
   };
   if (immediate) write();
   else saveTimer = setTimeout(write, 400);
+}
+
+// Пересчитывает выученные слова и раскладку библиотеки. Возвращает, сколько звуков поменяли категорию.
+function relearnAll() {
+  const res = Learn.relearn({ items: lib.items, overrides: lib.overrides, custom: lib.custom, forgotten: lib.forgotten });
+  lib.items = res.items;
+  lib.learned = res.learned;
+  return res.changed;
 }
 
 function send(channel, payload) {
@@ -74,6 +86,7 @@ async function scanRoots(roots) {
     if (token.stop) break;
     const others = lib.items.filter((it) => it.root !== root);
     lib.items = others.concat(items);
+    relearnAll();
     const f = lib.folders.find((x) => x.path === root);
     if (f) {
       f.lastScan = Date.now();
@@ -94,6 +107,8 @@ function snapshot() {
     items: lib.items,
     favorites: lib.favorites,
     overrides: lib.overrides,
+    custom: lib.custom,
+    learned: lib.learned,
     recent: lib.recent,
     settings: lib.settings,
     scanning: !!scanning,
@@ -167,6 +182,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   loadStore();
+  if (lib.items.length) relearnAll();
   nativeTheme.themeSource = lib.settings.theme || 'system';
   const dragIcon = makeDragIcon();
 
@@ -209,11 +225,60 @@ app.whenReady().then(() => {
     return lib.favorites;
   });
 
+  // Ручная смена категории. Приложение учится на ней и переносит похожие звуки.
   ipcMain.handle('library:setCategory', (_e, p, cat, sub) => {
+    const before = new Set(lib.learned.map((l) => l.word + '|' + l.id));
     if (cat) lib.overrides[p] = { cat, sub: sub || null };
     else delete lib.overrides[p];
+    const moved = relearnAll();
     saveStore();
-    return lib.overrides;
+    const words = lib.learned.filter((l) => l.source === 'manual' && !before.has(l.word + '|' + l.id)).map((l) => l.word);
+    send('library:changed', snapshot());
+    return { overrides: lib.overrides, moved, words };
+  });
+
+  ipcMain.handle('library:setCustom', (_e, list) => {
+    lib.custom = (Array.isArray(list) ? list : []).filter((c) => c && c.id && c.name);
+    // Ручные категории, указывающие на удалённую свою категорию, больше не действуют.
+    const ids = new Set(lib.custom.map((c) => c.id));
+    for (const [p, o] of Object.entries(lib.overrides)) if (o.cat.startsWith('user-') && !ids.has(o.cat)) delete lib.overrides[p];
+    const moved = relearnAll();
+    saveStore();
+    send('library:changed', snapshot());
+    return { moved };
+  });
+
+  ipcMain.handle('library:forget', (_e, word, undo) => {
+    const set = new Set(lib.forgotten);
+    undo ? set.delete(word) : set.add(word);
+    lib.forgotten = [...set];
+    const moved = relearnAll();
+    saveStore();
+    send('library:changed', snapshot());
+    return { moved };
+  });
+
+  // Результаты нейросети приходят пачками из окна: сохраняем и пересчитываем раскладку.
+  // Раскладку пересчитываем не чаще раза в 20 секунд, чтобы фоновое прослушивание не мешало работе.
+  let listenTimer = null;
+  const flushListen = () => {
+    clearTimeout(listenTimer);
+    listenTimer = null;
+    const moved = relearnAll();
+    saveStore();
+    if (moved) send('library:changed', snapshot());
+    return moved;
+  };
+  ipcMain.handle('library:saveListen', (_e, batch, final) => {
+    const byPath = new Map(lib.items.map((it, i) => [it.path, i]));
+    for (const { path: p, ai } of batch || []) {
+      const i = byPath.get(p);
+      if (i != null) lib.items[i] = { ...lib.items[i], ai };
+    }
+    if (final) return { moved: flushListen() };
+    if (!listenTimer) listenTimer = setTimeout(flushListen, 20000);
+    saveStore();
+    return { moved: 0 };
   });
 
   ipcMain.handle('library:addRecent', (_e, p) => {
@@ -235,6 +300,31 @@ app.whenReady().then(() => {
     const st = await fsp.stat(p);
     if (st.size > MAX_DECODE_BYTES) return null;
     const buf = await fsp.readFile(p);
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  });
+
+  // Начало файла: для нейросети хватает первых секунд звука.
+  ipcMain.handle('file:readHead', async (_e, p, bytes) => {
+    if (!lib.items.some((it) => it.path === p)) throw new Error('Файл не из библиотеки');
+    const fd = await fsp.open(p, 'r');
+    try {
+      const buf = Buffer.alloc(Math.min(bytes || 4e6, MAX_DECODE_BYTES));
+      const { bytesRead } = await fd.read(buf, 0, buf.length, 0);
+      return buf.buffer.slice(buf.byteOffset, buf.byteOffset + bytesRead);
+    } finally {
+      await fd.close();
+    }
+  });
+
+  // Файлы нейросети (wasm и модель) лежат внутри приложения; отдаём их байтами,
+  // потому что загрузчик не умеет читать file:// сам.
+  const ASSETS = {
+    'loader': path.join(__dirname, '..', 'renderer', 'vendor', 'mediapipe', 'audio_wasm_internal.js'),
+    'wasm': path.join(__dirname, '..', 'renderer', 'vendor', 'mediapipe', 'audio_wasm_internal.wasm'),
+    'model': path.join(__dirname, '..', 'renderer', 'vendor', 'yamnet.tflite'),
+  };
+  ipcMain.handle('app:asset', async (_e, name) => {
+    const buf = await fsp.readFile(ASSETS[name]);
     return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   });
 

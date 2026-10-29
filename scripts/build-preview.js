@@ -21,6 +21,9 @@ ${read('shared/taxonomy.js')}
 ${read('shared/categorize.js')}
 </script>
 <script>
+${read('shared/learn.js')}
+</script>
+<script>
 ${read('renderer/i18n.js')}
 </script>
 <script>

@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; media-src 'self' file: blob:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; script-src 'self' file:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file: blob:; img-src 'self' file: data:; media-src 'self' file: blob:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; script-src 'self' file: blob: 'wasm-unsafe-eval'">
 <title>Сэмплотека</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="styles.css">
@@ -22,7 +22,7 @@
     <div class="side-scroll">
       <nav class="side-group" id="nav-lib" aria-label="Библиотека" data-i18n-aria="library"></nav>
       <nav class="side-group" aria-label="Категории" data-i18n-aria="categories">
-        <div class="side-label" data-i18n="categories">Категории</div>
+        <div class="side-label"><span data-i18n="categories">Категории</span> <button id="btn-learn" data-i18n="learn" data-i18n-title="learnTitle" title="Свои категории, выученные слова, распознавание по звуку">Обучение</button></div>
         <div id="nav-cats"></div>
       </nav>
       <nav class="side-group" aria-label="Папки" data-i18n-aria="folders">
@@ -42,6 +42,11 @@
       <button class="icon-btn" id="btn-theme" title="Тема" aria-label="Тема">
         <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3.5a6.5 6.5 0 010 13z" fill="currentColor"/></svg>
       </button>
+    </div>
+    <div class="scan-box" id="listen-box" hidden>
+      <div class="scan-row"><span data-i18n="listening">Слушаю звуки</span><b class="mono" id="listen-count"></b></div>
+      <div class="meter"><i id="listen-meter"></i></div>
+      <div class="scan-file" id="listen-file"></div>
     </div>
     <div class="scan-box" id="scan-box" hidden>
       <div class="scan-row"><span id="scan-title" data-i18n="scanning">Сканирую</span><b class="mono" id="scan-count"></b></div>
@@ -147,11 +152,21 @@
     </div>
   </footer>
 </div>
+<dialog class="learn-dlg" id="learn-dlg" aria-labelledby="learn-title">
+  <div class="dlg-head">
+    <h2 id="learn-title" data-i18n="learn">Обучение</h2>
+    <button class="icon-btn" id="learn-close" data-i18n-aria="close" aria-label="Закрыть"><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="dlg-body" id="learn-body"></div>
+</dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 <!--/APP-->
 <script src="../shared/taxonomy.js"></script>
 <script src="../shared/categorize.js"></script>
+<script src="../shared/learn.js"></script>
+<script src="../shared/audioset-map.js"></script>
 <script src="i18n.js"></script>
+<script src="listen.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
