@@ -51,15 +51,13 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64",
-            "x64"
+            "universal"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64",
-            "x64"
+            "universal"
           ]
         }
       ],
@@ -68,11 +66,11 @@
       "identity": null,
       "hardenedRuntime": false,
       "darkModeSupport": true,
-      "artifactName": "Sampleteka-${version}-mac-${arch}.${ext}"
+      "artifactName": "Sampleteka-${version}-mac.${ext}"
     },
     "dmg": {
       "title": "Сэмплотека ${version}",
-      "artifactName": "Sampleteka-${version}-mac-${arch}.${ext}"
+      "artifactName": "Sampleteka-${version}-mac.${ext}"
     },
     "afterPack": "build/adhoc-sign.js"
   }
