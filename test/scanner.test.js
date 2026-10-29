@@ -19,7 +19,7 @@ test('сканер читает WAV/AIFF, ACID-темп и не трогает �
   assert.strictEqual(by('KCK_Deep_02').bits, 24);
   assert.ok(Math.abs(by('Lead_Glassy_F#m').duration - 1.5) < 0.01);
   assert.strictEqual(by('Lead_Glassy_F#m').sampleRate, 44100);
-  assert.strictEqual(by('бочка_жирная_03').sub, 'kick');
+  assert.strictEqual(by('бочка_жирная_03').sub, 'music.drums');
   assert.deepStrictEqual(fs.readdirSync(dir, { recursive: true }).sort(), before);
 
   // Повторный скан берёт неизменённые файлы из кэша.

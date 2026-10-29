@@ -142,8 +142,9 @@ function createWindow() {
     height: 900,
     minWidth: 980,
     minHeight: 620,
-    backgroundColor: '#121419',
+    backgroundColor: '#0f1117',
     title: 'Сэмплотека',
+    icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     show: false,
     webPreferences: {

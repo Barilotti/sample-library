@@ -1,35 +1,43 @@
 /* Layout: боковая панель библиотеки слева, список звуков справа, плеер с волной во всю ширину снизу —
    как микшерный пульт: навигация, каналы, мастер-секция. Тёмная тема по умолчанию (студии и DAW тёмные). */
 :root {
-  --bg: #111318;
-  --panel: #161920;
-  --raise: #1d212a;
-  --hover: #222733;
-  --line: #262b36;
-  --line-strong: #343a48;
+  --bg: #0f1117;
+  --panel: #141720;
+  --raise: #1b1f2b;
+  --hover: #212636;
+  --line: #252a38;
+  --line-strong: #333a4c;
   --fg: #e8eaf0;
   --muted: #8a92a3;
   --faint: #5d6575;
-  --accent: #f0a63a;          /* янтарь подсветки VU-метра */
-  --accent-ink: #1a1206;
-  --accent-soft: rgba(240, 166, 58, 0.14);
-  --focus: #f6c26f;
+  --accent: #5b9dff;          /* синий из логотипа: середина градиента циан → синий → фиолетовый */
+  --accent-ink: #050b18;
+  --accent-soft: rgba(91, 157, 255, 0.14);
+  --focus: #93c0ff;
+  --brand-grad: linear-gradient(90deg, #22d3ee, #3b82f6 50%, #a855f7);
   --danger: #f06a5a;
   --wave: #3f4656;
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 
-  --c-drums: #ef7458;
-  --c-bass: #a586f5;
-  --c-synth: #57a8f5;
-  --c-instruments: #d6b25a;
-  --c-vocal: #ec79b4;
-  --c-ambient: #4cc3b5;
-  --c-field: #7cc36b;
-  --c-fx: #4fd0e8;
+  --c-weapons: #ef5a50;
+  --c-magic: #b07cf7;
+  --c-scifi: #44d1e6;
+  --c-creatures: #dc7b4e;
+  --c-animals: #a9c255;
+  --c-human: #ec79b4;
+  --c-crowds: #e8a05a;
+  --c-ambience: #4cc3b5;
+  --c-weather: #5fb0f0;
+  --c-vehicles: #8094f5;
   --c-foley: #c9a27e;
-  --c-weapons: #e5534b;
-  --c-vehicles: #8c9ff0;
-  --c-animals: #b4c45a;
+  --c-tech: #9aa8bd;
+  --c-whoosh: #74d3a0;
+  --c-cinematic: #f2c14e;
+  --c-ui: #8fdc6a;
+  --c-cartoon: #ff9ad5;
+  --c-horror: #c8445f;
+  --c-noise: #e8e07a;
+  --c-music: #ff8a5c;
   --c-other: #7d8596;
 
   --font-display: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
@@ -44,23 +52,19 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #eef0f3; --panel: #f8f9fb; --raise: #ffffff; --hover: #e7eaef; --line: #dde1e8; --line-strong: #c8ced8;
-    --fg: #171a21; --muted: #5d6576; --faint: #8a92a3; --accent: #c57a0c; --accent-ink: #ffffff;
-    --accent-soft: rgba(197, 122, 12, 0.12); --focus: #c57a0c; --danger: #c8392c; --wave: #c3c9d4;
+    --fg: #171a21; --muted: #5d6576; --faint: #8a92a3; --accent: #2563eb; --accent-ink: #ffffff;
+    --accent-soft: rgba(37, 99, 235, 0.10); --focus: #2563eb; --danger: #c8392c; --wave: #c3c9d4;
     --shadow: 0 12px 32px rgba(23, 26, 33, 0.14);
-    --c-drums: #d4532f; --c-bass: #7a57e0; --c-synth: #2a7fd4; --c-instruments: #a9811f; --c-vocal: #c94a8e;
-    --c-ambient: #1f9488; --c-field: #4b9a39; --c-fx: #1b9cb5; --c-foley: #9a7552; --c-weapons: #c43a32;
-    --c-vehicles: #5468c9; --c-animals: #7f8f22; --c-other: #6b7385;
+    --c-weapons: #ac4039; --c-magic: #7e59b1; --c-scifi: #3096a5; --c-creatures: #9e5838; --c-animals: #798b3d; --c-human: #a95781; --c-crowds: #a77340; --c-ambience: #368c82; --c-weather: #447eac; --c-vehicles: #5c6ab0; --c-foley: #90745a; --c-tech: #6e7888; --c-whoosh: #539773; --c-cinematic: #ae8a38; --c-ui: #669e4c; --c-cartoon: #b76e99; --c-horror: #903044; --c-noise: #a7a157; --c-music: #b76342; --c-other: #5a5f6c;
     color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #eef0f3; --panel: #f8f9fb; --raise: #ffffff; --hover: #e7eaef; --line: #dde1e8; --line-strong: #c8ced8;
-  --fg: #171a21; --muted: #5d6576; --faint: #8a92a3; --accent: #c57a0c; --accent-ink: #ffffff;
-  --accent-soft: rgba(197, 122, 12, 0.12); --focus: #c57a0c; --danger: #c8392c; --wave: #c3c9d4;
+  --fg: #171a21; --muted: #5d6576; --faint: #8a92a3; --accent: #2563eb; --accent-ink: #ffffff;
+  --accent-soft: rgba(37, 99, 235, 0.10); --focus: #2563eb; --danger: #c8392c; --wave: #c3c9d4;
   --shadow: 0 12px 32px rgba(23, 26, 33, 0.14);
-  --c-drums: #d4532f; --c-bass: #7a57e0; --c-synth: #2a7fd4; --c-instruments: #a9811f; --c-vocal: #c94a8e;
-  --c-ambient: #1f9488; --c-field: #4b9a39; --c-fx: #1b9cb5; --c-foley: #9a7552; --c-weapons: #c43a32;
-  --c-vehicles: #5468c9; --c-animals: #7f8f22; --c-other: #6b7385;
+  --c-weapons: #ac4039; --c-magic: #7e59b1; --c-scifi: #3096a5; --c-creatures: #9e5838; --c-animals: #798b3d; --c-human: #a95781; --c-crowds: #a77340; --c-ambience: #368c82; --c-weather: #447eac; --c-vehicles: #5c6ab0; --c-foley: #90745a; --c-tech: #6e7888; --c-whoosh: #539773; --c-cinematic: #ae8a38; --c-ui: #669e4c; --c-cartoon: #b76e99; --c-horror: #903044; --c-noise: #a7a157; --c-music: #b76342; --c-other: #5a5f6c;
   color-scheme: light;
 }
 
@@ -103,15 +107,20 @@ button { cursor: pointer; }
   gap: 10px;
   padding: 18px 18px 14px;
 }
-.brand-mark { display: flex; align-items: flex-end; gap: 2px; height: 18px; }
-.brand-mark i { width: 3px; border-radius: 1px; background: var(--accent); display: block; }
-.brand-mark i:nth-child(1) { height: 7px; opacity: .55; }
-.brand-mark i:nth-child(2) { height: 14px; opacity: .8; }
-.brand-mark i:nth-child(3) { height: 18px; }
-.brand-mark i:nth-child(4) { height: 11px; opacity: .7; }
-.brand-mark i:nth-child(5) { height: 5px; opacity: .45; }
-.brand-name { font: 600 15px/1 var(--font-display); letter-spacing: 0.01em; }
-.brand-theme { margin-left: auto; }
+.brand-logo { width: 36px; height: 36px; flex: none; }
+.brand-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.brand-name { font: 700 15px/1 var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; }
+.brand-by { display: flex; align-items: center; gap: 4px; font: 400 10.5px/1 var(--font-body); color: var(--muted); white-space: nowrap; }
+.brand-by b { font-weight: 700; letter-spacing: 0.02em; margin-left: 1px; }
+.cs-mark { height: 11px; width: auto; flex: none; }
+.cs-lockup { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); margin-bottom: 18px; font: 400 20px/1 var(--font-body); }
+.cs-lockup .cs-mark { height: 30px; }
+.cs-lockup b { font-weight: 800; letter-spacing: 0.01em; }
+.side-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px 12px; border-top: 1px solid var(--line);
+}
+.lang-seg button { font: 600 11px/1 var(--font-data); letter-spacing: 0.04em; padding: 0 12px; height: 24px; }
 
 .side-scroll { overflow-y: auto; flex: 1; padding: 4px 10px 16px; display: flex; flex-direction: column; gap: 18px; }
 .side-scroll::-webkit-scrollbar { width: 8px; }
@@ -188,7 +197,7 @@ button { cursor: pointer; }
 .scan-row b { color: var(--fg); font-weight: 500; }
 .scan-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--faint); font-family: var(--font-data); font-size: 11px; }
 .meter { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.meter i { display: block; height: 100%; background: var(--brand-grad); width: 0; transition: width .2s; }
 .meter.indeterminate i { width: 30%; animation: slide 1.1s ease-in-out infinite; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 
@@ -284,7 +293,7 @@ kbd {
 }
 .row:hover { background: var(--hover); }
 .row.sel { background: var(--accent-soft); }
-.row.sel::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+.row.sel::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #22d3ee, #3b82f6 50%, #a855f7); }
 .row .play {
   width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--faint);
   display: grid; place-items: center; padding: 0;
@@ -305,8 +314,8 @@ kbd {
   font: 500 11px/1 var(--font-body); padding: 4px 7px; border-radius: 5px; justify-self: start;
   border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap;
 }
-.type-tag.loop { border-color: color-mix(in srgb, var(--c-synth) 55%, transparent); color: var(--c-synth); }
-.type-tag.long { border-color: color-mix(in srgb, var(--c-ambient) 55%, transparent); color: var(--c-ambient); }
+.type-tag.loop { border-color: color-mix(in srgb, var(--c-weather) 55%, transparent); color: var(--c-weather); }
+.type-tag.long { border-color: color-mix(in srgb, var(--c-ambience) 55%, transparent); color: var(--c-ambience); }
 .row .num { font: 400 12.5px/1 var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; }
 .row .fmt { font: 400 11.5px/1 var(--font-data); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .star { opacity: 0; }

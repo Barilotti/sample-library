@@ -1,14 +1,15 @@
-/* global Categorize, DemoBackend */
+/* global Categorize, DemoBackend, I18n */
 'use strict';
 
 (function () {
   const C = Categorize;
+  const tr = I18n.t;
   const $ = (id) => document.getElementById(id);
   const ROW_H = 52;
   const isDemo = !window.api;
   const backend = window.api ? electronBackend(window.api) : DemoBackend.create();
 
-  const TYPE_LABEL = { oneshot: 'Ваншот', loop: 'Луп', long: 'Длинный', unknown: '—' };
+  const typeLabel = (t) => ({ oneshot: tr('typeOneshot'), loop: tr('typeLoop'), long: tr('typeLong') }[t] || '—');
   const KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   const FLAT_TO_SHARP = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
 
@@ -51,9 +52,11 @@
     return note + (m[3] ? 'm' : '');
   }
 
+  // Ручная категория из прошлой версии могла указывать на удалённый раздел: тогда берём автоматическую.
   function catOf(it) {
     const o = state.overrides[it.path];
-    return o ? o : it;
+    if (o && C.BY_ID[o.cat] && (!o.sub || C.BY_ID[o.sub])) return o;
+    return C.BY_ID[it.cat] ? it : { cat: 'other', sub: null };
   }
 
   function applySnapshot(s) {
@@ -64,6 +67,7 @@
     state.recent = s.recent || [];
     state.settings = { ...state.settings, ...(s.settings || {}) };
     if (!isDemo) applyTheme(state.settings.theme || 'system');
+    applyLang(state.settings.lang || 'ru', false);
     $('autoplay').checked = state.settings.autoplay !== false;
     $('vol').value = state.settings.volume ?? 0.8;
     player.setVolume(+$('vol').value);
@@ -174,7 +178,7 @@
     const dir = state.sort.dir;
     const coll = new Intl.Collator(['ru', 'en'], { numeric: true, sensitivity: 'base' });
     if (key === 'name') out.sort((a, b) => dir * coll.compare(a.name, b.name));
-    else if (key === 'cat') out.sort((a, b) => dir * (catLabel(catOf(a)).localeCompare(catLabel(catOf(b)), 'ru') || coll.compare(a.name, b.name)));
+    else if (key === 'cat') out.sort((a, b) => dir * (catLabel(catOf(a)).localeCompare(catLabel(catOf(b)), I18n.lang) || coll.compare(a.name, b.name)));
     else if (key === 'bpm' || key === 'duration') out.sort((a, b) => dir * ((a[key] ?? 1e9) - (b[key] ?? 1e9)));
     else if (key === 'key') out.sort((a, b) => dir * String(a._key || 'Я').localeCompare(String(b._key || 'Я')));
     else if (recentIdx) out.sort((a, b) => recentIdx.get(a.path) - recentIdx.get(b.path));
@@ -193,8 +197,8 @@
   function catLabel(c) {
     const id = c.sub || c.cat;
     const def = C.BY_ID[id];
-    if (!def) return 'Без категории';
-    return c.sub ? C.BY_ID[c.cat].label + ' › ' + def.label : def.label;
+    if (!def) return tr('uncategorized');
+    return c.sub ? C.labelOf(c.cat, I18n.lang) + ' › ' + C.labelOf(id, I18n.lang) : C.labelOf(id, I18n.lang);
   }
   const catColor = (id) => `var(--c-${id || 'other'})`;
 
@@ -209,8 +213,11 @@
     return { cat, sub };
   }
 
-  const fmtCount = (n) => (n == null ? '' : n.toLocaleString('ru-RU'));
+  const fmtCount = (n) => (n == null ? '' : n.toLocaleString(I18n.locale()));
   const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+  // Знак студии CHERNOVsound: буква C и всплеск звуковой волны.
+  const CS_MARK = '<svg class="cs-mark" viewBox="312 432 356 216" aria-hidden="true"><path d="M476.6 483.4A80 80 0 1 0 476.6 596.6" fill="none" stroke="currentColor" stroke-width="52"/><path d="M458 545H493L505 562L520 515L540 598L563 455L580 638L598 498L612 560L624 532L634 548L640 545H662" fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/></svg>';
 
   const ICONS = {
     all: '<svg width="15" height="15" viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
@@ -229,9 +236,9 @@
     const v = state.view;
     const noCat = !v.cat && !v.folder;
     const libItems = [
-      ['all', 'Все звуки', state.items.length],
-      ['fav', 'Избранное', state.items.filter((it) => state.favorites.has(it.path)).length],
-      ['recent', 'Недавние', state.recent.length ? Math.min(state.recent.length, state.items.length) : 0],
+      ['all', tr('allSounds'), state.items.length],
+      ['fav', tr('favorites'), state.items.filter((it) => state.favorites.has(it.path)).length],
+      ['recent', tr('recent'), state.recent.length ? Math.min(state.recent.length, state.items.length) : 0],
     ];
     $('nav-lib').innerHTML = libItems
       .map(([id, label, n]) => `<button class="nav-item${v.lib === id && noCat ? ' active' : ''}" data-lib="${id}">${ICONS[id]}<span class="label">${label}</span><span class="count">${fmtCount(n)}</span></button>`)
@@ -243,23 +250,23 @@
     let html = '';
     for (const c of tops) {
       const active = v.cat === c.id && !v.sub;
-      html += `<button class="nav-item${active ? ' active' : ''}" data-cat="${c.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(c.label)}</span><span class="count">${fmtCount(cnt.cat[c.id])}</span></button>`;
+      html += `<button class="nav-item${active ? ' active' : ''}" data-cat="${c.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(C.labelOf(c.id, I18n.lang))}</span><span class="count">${fmtCount(cnt.cat[c.id])}</span></button>`;
       if (v.cat === c.id || state.expanded.has(c.id)) {
         const subs = C.CATEGORIES.filter((s) => s.parent === c.id && cnt.sub[s.id]);
         subs.sort((a, b) => cnt.sub[b.id] - cnt.sub[a.id]);
         for (const s of subs) {
-          html += `<button class="nav-item nav-sub${v.sub === s.id ? ' active' : ''}" data-cat="${c.id}" data-sub="${s.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(s.label)}</span><span class="count">${fmtCount(cnt.sub[s.id])}</span></button>`;
+          html += `<button class="nav-item nav-sub${v.sub === s.id ? ' active' : ''}" data-cat="${c.id}" data-sub="${s.id}" style="--cat:${catColor(c.id)}"><span class="dot"></span><span class="label">${esc(C.labelOf(s.id, I18n.lang))}</span><span class="count">${fmtCount(cnt.sub[s.id])}</span></button>`;
         }
       }
     }
-    $('nav-cats').innerHTML = html || '<div class="nav-item" style="cursor:default">Появятся после сканирования</div>';
+    $('nav-cats').innerHTML = html || `<div class="nav-item" style="cursor:default">${tr('catsAfterScan')}</div>`;
 
     $('nav-folders').innerHTML = state.folders
       .map((f) => {
         const name = f.path.split(/[\\/]/).filter(Boolean).pop() || f.path;
         const active = v.folder === f.path;
         return `<div class="nav-item folder-item${active ? ' active' : ''}" data-folder="${esc(f.path)}" title="${esc(f.path)}" role="button" tabindex="0">${ICONS.folder}<span class="label">${esc(name)}</span><span class="count">${fmtCount(f.count)}</span>
-          <span class="folder-actions"><button class="icon-btn" data-rescan="${esc(f.path)}" title="Пересканировать" aria-label="Пересканировать">${ICONS.rescan}</button><button class="icon-btn" data-remove="${esc(f.path)}" title="Убрать из библиотеки (файлы не удаляются)" aria-label="Убрать из библиотеки">${ICONS.remove}</button></span></div>`;
+          <span class="folder-actions"><button class="icon-btn" data-rescan="${esc(f.path)}" title="${tr('rescan')}" aria-label="${tr('rescan')}">${ICONS.rescan}</button><button class="icon-btn" data-remove="${esc(f.path)}" title="${tr('removeFolderTitle')}" aria-label="${tr('removeFolder')}">${ICONS.remove}</button></span></div>`;
       })
       .join('');
   }
@@ -275,11 +282,11 @@
 
     const v = state.view;
     let chips = '';
-    if (v.cat) chips += `<span class="chip-active"><span class="dot" style="--cat:${catColor(v.cat)}"></span>${esc(catLabel({ cat: v.cat, sub: v.sub }))}<button data-clear="cat" aria-label="Убрать категорию">${ICONS.remove}</button></span> `;
-    if (v.folder) chips += `<span class="chip-active">${ICONS.folder}${esc(shortPath(v.folder))}<button data-clear="folder" aria-label="Убрать папку">${ICONS.remove}</button></span>`;
+    if (v.cat) chips += `<span class="chip-active"><span class="dot" style="--cat:${catColor(v.cat)}"></span>${esc(catLabel({ cat: v.cat, sub: v.sub }))}<button data-clear="cat" aria-label="${tr('clearCat')}">${ICONS.remove}</button></span> `;
+    if (v.folder) chips += `<span class="chip-active">${ICONS.folder}${esc(shortPath(v.folder))}<button data-clear="folder" aria-label="${tr('clearFolder')}">${ICONS.remove}</button></span>`;
     $('f-active').innerHTML = chips;
-    $('result-count').innerHTML = `<b>${fmtCount(state.filtered.length)}</b> ${plural(state.filtered.length, 'звук', 'звука', 'звуков')}`
-      + (state.partial ? ` <span class="partial" title="Все слова сразу не нашлись, показаны звуки, где есть хотя бы одно">· частичные совпадения${state.unmatched.length ? ', не найдено: «' + esc(state.unmatched.join('», «')) + '»' : ''}</span>` : '');
+    $('result-count').innerHTML = `<b>${fmtCount(state.filtered.length)}</b> ${I18n.plural(state.filtered.length, tr('sounds'))}`
+      + (state.partial ? ` <span class="partial" title="${tr('partialTitle')}">· ${tr('partial')}${state.unmatched.length ? ', ' + tr('notFound') + ': «' + esc(state.unmatched.join('», «')) + '»' : ''}</span>` : '');
 
     for (const b of $('list-head').querySelectorAll('[data-sort]')) {
       const on = state.sort.key === b.dataset.sort;
@@ -296,13 +303,6 @@
     return rest ? rootName + ' / ' + rest.split(/[\\/]/).join(' / ') : rootName;
   }
 
-  function plural(n, one, few, many) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-    return many;
-  }
-
   // ---------- Виртуальный список ----------
 
   const list = $('list');
@@ -310,8 +310,9 @@
 
   function fmtDur(s) {
     if (s == null) return '—';
-    if (s < 10) return s.toFixed(2).replace('.', ',') + ' с';
-    if (s < 60) return s.toFixed(1).replace('.', ',') + ' с';
+    const dec = I18n.lang === 'en' ? '.' : ',';
+    if (s < 10) return s.toFixed(2).replace('.', dec) + ' ' + tr('sec');
+    if (s < 60) return s.toFixed(1).replace('.', dec) + ' ' + tr('sec');
     const m = Math.floor(s / 60);
     return m + ':' + String(Math.floor(s % 60)).padStart(2, '0');
   }
@@ -338,17 +339,17 @@
     const fav = state.favorites.has(it.path);
     const playing = player.path === it.path && player.playing;
     const folder = it.rel.split(/[\\/]/).slice(0, -1).join(' / ');
-    const sub = c.sub ? C.BY_ID[c.sub].label : C.BY_ID[c.cat] ? C.BY_ID[c.cat].label : 'Без категории';
+    const sub = C.labelOf(c.sub || c.cat, I18n.lang);
     return `<div class="row${i === state.sel ? ' sel' : ''}${playing ? ' playing' : ''}" style="top:${i * ROW_H}px" data-i="${i}" draggable="true">
-      <button class="play" data-play="${i}" tabindex="-1" aria-label="Прослушать">${playing ? ICONS.pause : ICONS.play}</button>
+      <button class="play" data-play="${i}" tabindex="-1" aria-label="${tr('listen')}">${playing ? ICONS.pause : ICONS.play}</button>
       <div class="title"><span class="name">${highlight(it.name)}</span><span class="path">${esc(folder || '—')}</span></div>
-      <span class="cat-chip${manual ? ' manual' : ''}" title="${esc(catLabel(c))}${manual ? ' (вручную)' : ''}"><span class="dot" style="--cat:${catColor(c.cat)}"></span><span>${esc(sub)}</span></span>
-      <span class="type-tag ${it.type}">${TYPE_LABEL[it.type] || '—'}</span>
+      <span class="cat-chip${manual ? ' manual' : ''}" title="${esc(catLabel(c))}${manual ? ' ' + tr('manual') : ''}"><span class="dot" style="--cat:${catColor(c.cat)}"></span><span>${esc(sub)}</span></span>
+      <span class="type-tag ${it.type}">${typeLabel(it.type)}</span>
       <span class="num c-bpm">${it.bpm ? (Math.round(it.bpm * 10) / 10).toString().replace('.', ',') : '—'}</span>
       <span class="num c-key">${it._key || '—'}</span>
       <span class="num">${fmtDur(it.duration)}</span>
       <span class="fmt">${fmtFormat(it)}</span>
-      <button class="icon-btn star${fav ? ' on' : ''}" data-fav="${i}" tabindex="-1" aria-label="${fav ? 'Убрать из избранного' : 'В избранное'}">${fav ? ICONS.starOn : ICONS.star}</button>
+      <button class="icon-btn star${fav ? ' on' : ''}" data-fav="${i}" tabindex="-1" aria-label="${fav ? tr('favRemove') : tr('favAdd')}">${fav ? ICONS.starOn : ICONS.star}</button>
     </div>`;
   }
 
@@ -377,16 +378,17 @@
     e.hidden = false;
     if (!state.folders.length) {
       e.innerHTML = `<div class="empty-card">
-        <h2>Добавьте папку с сэмплами</h2>
-        <p>Сэмплотека прочитает названия, папки и параметры звуков и сама разложит их по категориям. Файлы останутся на своих местах.</p>
-        <button class="btn-primary" data-action="add">${ICONS.folder} Выбрать папку</button>
-        <span class="drop-hint">или перетащите папку из Проводника в это окно</span></div>`;
+        <div class="cs-lockup">${CS_MARK}<span><b>CHERNOV</b>sound</span></div>
+        <h2>${tr('emptyAddTitle')}</h2>
+        <p>${tr('emptyAddText')}</p>
+        <button class="btn-primary" data-action="add">${ICONS.folder} ${tr('pickFolder')}</button>
+        <span class="drop-hint">${tr('dropHint')}</span></div>`;
     } else if (state.items.length === 0) {
-      e.innerHTML = `<div class="empty-card"><h2>Читаю библиотеку…</h2><p>Звуки появятся здесь по мере сканирования. Большая папка может занять несколько минут при первом запуске.</p></div>`;
+      e.innerHTML = `<div class="empty-card"><h2>${tr('emptyScanTitle')}</h2><p>${tr('emptyScanText')}</p></div>`;
     } else if (state.view.lib === 'fav' && !state.filters.q) {
-      e.innerHTML = `<div class="empty-card"><h2>Здесь будут любимые звуки</h2><p>Нажмите звёздочку у звука или клавишу F, чтобы добавить его в избранное.</p></div>`;
+      e.innerHTML = `<div class="empty-card"><h2>${tr('emptyFavTitle')}</h2><p>${tr('emptyFavText')}</p></div>`;
     } else {
-      e.innerHTML = `<div class="empty-card"><h2>Ничего не нашлось</h2><p>Попробуйте другое слово или уберите часть фильтров. Поиск понимает русский и английский: «бочка» найдёт и Kick.</p><button class="btn-ghost" data-action="reset">Сбросить фильтры</button></div>`;
+      e.innerHTML = `<div class="empty-card"><h2>${tr('emptyNoneTitle')}</h2><p>${tr('emptyNoneText')}</p><button class="btn-ghost" data-action="reset">${tr('resetFilters')}</button></div>`;
     }
   }
 
@@ -403,15 +405,15 @@
 
   let keyOptsFor = null;
   function renderKeyOptions() {
-    if (keyOptsFor === state.items) return;
-    keyOptsFor = state.items;
+    if (keyOptsFor === state.items + I18n.lang) return;
+    keyOptsFor = state.items + I18n.lang;
     const present = new Set(state.items.map((it) => it._key).filter(Boolean));
     const sel = $('f-key');
     const cur = sel.value;
-    let html = '<option value="">любая</option>';
+    let html = `<option value="">${tr('any')}</option>`;
     for (const q of ['', 'm']) {
       const opts = KEYS.map((k) => k + q).filter((k) => present.has(k));
-      if (opts.length) html += `<optgroup label="${q ? 'Минор' : 'Мажор'}">${opts.map((k) => `<option value="${k}">${k}</option>`).join('')}</optgroup>`;
+      if (opts.length) html += `<optgroup label="${q ? tr('minor') : tr('major')}">${opts.map((k) => `<option value="${k}">${k}</option>`).join('')}</optgroup>`;
     }
     sel.innerHTML = html;
     sel.value = cur;
@@ -491,7 +493,7 @@
       buffer = null;
       offset = 0;
       api.duration = item.duration || 0;
-      waveform.set(null, 'Загружаю…');
+      waveform.set(null, tr('loading'));
       onChange();
       try {
         let entry = cache.get(item.path);
@@ -510,13 +512,13 @@
           audioEl.volume = api.volume ?? 0.8;
           audioEl.onended = () => { api.playing = false; onChange(); };
           audioEl.onloadedmetadata = () => { api.duration = audioEl.duration; onChange(); };
-          waveform.set(null, 'Длинный файл: волна не строится, перемотка работает');
+          waveform.set(null, tr('longFile'));
         }
         if (autoplay) playFrom(0);
         else onChange();
       } catch (err) {
         if (my !== token) return;
-        waveform.set(null, 'Не удалось открыть файл: ' + (err && err.message ? err.message : 'формат не поддерживается'));
+        waveform.set(null, tr('cantOpen') + (err && err.message ? err.message : tr('badFormat')));
       }
     }
 
@@ -641,7 +643,7 @@
     const it = player.item;
     $('p-play').disabled = !it;
     $('p-icon').innerHTML = player.playing ? '<path d="M5 4h3.5v12H5zM11.5 4H15v12h-3.5z" fill="currentColor"/>' : '<path d="M6 4l11 6-11 6z" fill="currentColor"/>';
-    $('p-play').setAttribute('aria-label', player.playing ? 'Пауза' : 'Воспроизвести');
+    $('p-play').setAttribute('aria-label', player.playing ? tr('pause') : tr('play'));
     waveform.loop();
     const key = (player.path || '') + player.playing;
     if (key !== prevPlaying) { prevPlaying = key; renderRows(true); }
@@ -661,13 +663,14 @@
     let opts = '';
     for (const top of C.CATEGORIES.filter((x) => !x.parent)) {
       const subs = C.CATEGORIES.filter((x) => x.parent === top.id);
-      opts += `<optgroup label="${esc(top.label)}"><option value="${top.id}|">${esc(top.label)}</option>${subs.map((s) => `<option value="${top.id}|${s.id}">${esc(top.label)} › ${esc(s.label)}</option>`).join('')}</optgroup>`;
+      const tl = esc(C.labelOf(top.id, I18n.lang));
+      opts += `<optgroup label="${tl}"><option value="${top.id}|">${tl}</option>${subs.map((s) => `<option value="${top.id}|${s.id}">${tl} › ${esc(C.labelOf(s.id, I18n.lang))}</option>`).join('')}</optgroup>`;
     }
     const manual = state.overrides[it.path];
-    if (manual) opts = `<option value="__auto">↺ Вернуть автоматическую</option>` + opts;
+    if (manual) opts = `<option value="__auto">${tr('autoCat')}</option>` + opts;
     cat.innerHTML = opts;
     cat.value = c.cat + '|' + (c.sub || '');
-    cat.title = manual ? 'Категория выбрана вручную' : 'Категория определена автоматически. Можно поменять.';
+    cat.title = manual ? tr('catManual') : tr('catAuto');
 
     const isFav = state.favorites.has(it.path);
     fav.classList.toggle('on', isFav);
@@ -687,10 +690,10 @@
     $('p-crumbs').innerHTML = crumbs;
 
     const facts = [
-      ['Длина', fmtDur(player.duration || it.duration)],
-      ['Темп', it.bpm ? it.bpm + ' BPM' : '—'],
-      ['Тон', it._key || '—'],
-      ['Формат', fmtFormat(it) + (it.channels ? (it.channels === 1 ? ' моно' : ' стерео') : '')],
+      [tr('colLen'), fmtDur(player.duration || it.duration)],
+      [tr('tempo'), it.bpm ? it.bpm + ' BPM' : '—'],
+      [tr('colKey'), it._key || '—'],
+      [tr('format'), fmtFormat(it) + (it.channels ? ' ' + (it.channels === 1 ? tr('mono') : tr('stereo')) : '')],
     ];
     $('facts').innerHTML = facts.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
   }
@@ -764,7 +767,7 @@
     if (remove) {
       e.stopPropagation();
       applySnapshot(await backend.removeFolder(remove.dataset.remove));
-      toast('Папка убрана из библиотеки. Файлы на диске не тронуты.');
+      toast(tr('folderRemoved'));
       return;
     }
     const lib = t.closest('[data-lib]');
@@ -795,21 +798,43 @@
   $('btn-add-folder').addEventListener('click', addFolder);
 
   const THEMES = ['system', 'dark', 'light'];
-  const THEME_LABEL = { system: 'Тема: как в Windows', dark: 'Тема: тёмная', light: 'Тема: светлая' };
+  const themeLabel = (t) => tr({ system: 'themeSystem', dark: 'themeDark', light: 'themeLight' }[t]);
   function applyTheme(t) {
     if (t === 'system') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = t;
-    $('btn-theme').title = THEME_LABEL[t];
-    $('btn-theme').setAttribute('aria-label', THEME_LABEL[t]);
+    $('btn-theme').title = themeLabel(t);
+    $('btn-theme').setAttribute('aria-label', themeLabel(t));
     waveform.draw();
   }
+
+  // Язык интерфейса: русский или английский. Названия категорий тоже переводятся.
+  function applyLang(l, rerender = true) {
+    I18n.set(l);
+    I18n.apply(document);
+    document.title = tr('appName');
+    for (const b of $('lang-seg').children) b.classList.toggle('on', b.dataset.lang === I18n.lang);
+    applyTheme(state.settings.theme || 'system');
+    if (isDemo) $('demo-banner').innerHTML = tr('demoBanner');
+    if (rerender) {
+      renderAll(true);
+      renderPlayerMeta();
+    }
+  }
+  $('lang-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lang]');
+    if (!b || b.dataset.lang === I18n.lang) return;
+    const next = b.dataset.lang;
+    state.settings.lang = next;
+    backend.setSettings({ lang: next });
+    applyLang(next);
+  });
   $('btn-theme').addEventListener('click', () => {
     const cur = state.settings.theme || 'system';
     const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
     state.settings.theme = next;
     applyTheme(next);
     backend.setSettings({ theme: next });
-    toast(THEME_LABEL[next]);
+    toast(themeLabel(next));
   });
   $('btn-rescan-all').addEventListener('click', () => backend.rescan());
 
@@ -893,7 +918,7 @@
     }
     renderAll(true);
     renderPlayerMeta();
-    toast(v === '__auto' ? 'Категория снова определяется автоматически' : 'Категория изменена только в Сэмплотеке, файл не тронут');
+    toast(v === '__auto' ? tr('catBackAuto') : tr('catChanged'));
   });
   $('p-crumbs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-crumb]');
@@ -957,7 +982,7 @@
     e.preventDefault();
     dragDepth = 0;
     document.body.classList.remove('dropping');
-    if (isDemo) { toast('В демо-версии папки не добавляются. В приложении — да.'); return; }
+    if (isDemo) { toast(tr('demoNoFolders')); return; }
     for (const f of e.dataTransfer.files) {
       const p = backend.pathForFile(f);
       if (p) {
@@ -987,12 +1012,12 @@
     box.hidden = false;
     const meter = $('scan-meter');
     if (p.phase === 'listing') {
-      $('scan-title').textContent = 'Ищу звуки';
+      $('scan-title').textContent = tr('scanListing');
       $('scan-count').textContent = fmtCount(p.found || 0);
       meter.classList.add('indeterminate');
       $('scan-file').textContent = p.root ? shortPath(p.root) : '';
     } else {
-      $('scan-title').textContent = 'Читаю файлы';
+      $('scan-title').textContent = tr('scanReading');
       $('scan-count').textContent = `${fmtCount(p.done)} / ${fmtCount(p.total)}`;
       meter.classList.remove('indeterminate');
       meter.firstElementChild.style.width = (p.total ? (100 * p.done) / p.total : 0) + '%';
@@ -1004,7 +1029,7 @@
   if (isDemo) {
     const b = $('demo-banner');
     b.hidden = false;
-    b.innerHTML = '<b>Демо.</b> Это пример библиотеки со сгенерированными звуками, чтобы показать интерфейс. В приложении здесь будут ваши файлы.';
+    b.innerHTML = tr('demoBanner');
   }
 
   // ---------- Мост к Electron ----------

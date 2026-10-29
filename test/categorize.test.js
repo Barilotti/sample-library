@@ -4,23 +4,20 @@ const assert = require('node:assert');
 const C = require('../src/shared/categorize');
 
 const cases = [
-  ['Drums/Kicks/Kick_Hard_01.wav', 'drums', 'kick'],
-  ['Сэмплы/Ударные/бочки/бочка_жирная.wav', 'drums', 'kick'],
-  ['misc/bochka_02.wav', 'drums', 'kick'],
-  ['Kick One Shot 4.wav', 'drums', 'kick'],
-  ['Hats/OH_02.wav', 'drums', 'hihat'],
-  ['Перкуссия/Шейкер.wav', 'drums', 'perc'],
-  ['Synth/Pad_Warm_Cmin.wav', 'synth', 'pad'],
-  ['FX/Risers/Riser_Long_01.wav', 'fx', 'transition'],
-  ['Эффекты/Свуш_быстрый_01.wav', 'fx', 'transition'],
-  ['UI/Click_Soft.wav', 'fx', 'ui'],
-  ['Звуки/Шаги по снегу 03.wav', 'foley', null],
-  ['Звуки/Выстрел_пистолет_01.wav', 'weapons', null],
-  ['city/Улица_Москва_трафик.wav', 'field', null],
-  ['Атмосферы/Гул подвал.wav', 'ambient', null],
-  ['Голос/фраза_привет.wav', 'vocal', null],
-  ['Животные/Лай собаки.wav', 'animals', null],
-  ['Random/лестница.wav', 'other', null],
+  ['Drums/Kicks/Kick_Hard_01.wav', 'music', 'music.drums'],
+  ['Сэмплы/Ударные/бочки/бочка_жирная.wav', 'music', 'music.drums'],
+  ['misc/bochka_02.wav', 'music', 'music.drums'],
+  ['Synth/Pad_Warm_Cmin.wav', 'music', 'music.synth'],
+  ['FX/Risers/Riser_Long_01.wav', 'whoosh', 'whoosh.risers'],
+  ['Эффекты/Свуш_быстрый_01.wav', 'whoosh', null],
+  ['UI/Click_Soft.wav', 'ui', 'ui.clicks'],
+  ['Звуки/Шаги по снегу 03.wav', 'foley', 'foley.footsteps'],
+  ['Звуки/Выстрел_пистолет_01.wav', 'weapons', 'weapons.guns'],
+  ['city/Улица_Москва_трафик.wav', 'ambience', 'ambience.city'],
+  ['Атмосферы/Гул подвал.wav', 'ambience', 'ambience.drones'],
+  ['Голос/фраза_привет.wav', 'human', 'human.speech'],
+  ['Животные/Лай собаки.wav', 'animals', 'animals.dogs'],
+  ['Random/кракозябра.wav', 'other', null],
 ];
 
 test('категории по имени и папкам (RU/EN)', () => {
@@ -43,10 +40,10 @@ test('BPM и тональность', () => {
 });
 
 test('поиск понимает русский и транслит', () => {
-  assert.ok(C.categoriesForQueryWord('бочка').has('kick'));
-  assert.ok(C.categoriesForQueryWord('бочки').has('kick'));
-  assert.ok(C.categoriesForQueryWord('veter').has('field'));
-  assert.ok(C.categoriesForQueryWord('дождь').has('field'));
+  assert.ok(C.categoriesForQueryWord('бочка').has('music.drums'));
+  assert.ok(C.categoriesForQueryWord('бочки').has('music.drums'));
+  assert.ok(C.categoriesForQueryWord('veter').has('weather.wind'));
+  assert.ok(C.categoriesForQueryWord('дождь').has('weather.rain'));
 });
 
 test('тип: луп, ваншот, длинный', () => {
@@ -69,19 +66,47 @@ test('перевод запросов RU/EN и слитные слова', () =>
 
 test('реальные названия из библиотеки команды', () => {
   const cat = (p) => { const r = C.classify(p.split('/'), null); return r.sub || r.cat; };
-  assert.strictEqual(cat('Boom Library - Magic Bundle/boom35_1/MACK Effect Impact Sub Rumble.wav'), 'scifi');
-  assert.strictEqual(cat('Boom Library - Magic Bundle/boom35_3/MACK Fire Burst Spirit Light.wav'), 'scifi');
-  assert.strictEqual(cat('BOOM.Library.DOGS.WAV/Dogs_01-07/Australian Shepherd (Pepper) Bark, Yelp 1.wav'), 'animals');
-  assert.strictEqual(cat('KROTOS/Krotos Gun Foley SFX Library WAV/Pistol Slide.wav'), 'weapons');
-  assert.strictEqual(cat('Новая папка/Аварии/Лобовое столкновение.mp3'), 'vehicles');
-  assert.strictEqual(cat('Новая папка/Анатомические звуки/Мужчина зевает.mp3'), 'vocal');
-  assert.strictEqual(cat('Armas/1. Fornite SFX PACK/Shield Break 1.mp3'), 'weapons');
-  assert.strictEqual(cat('Ambients/Дощ б\'є по підвіконню.wav'), 'field');
-  assert.strictEqual(cat('Ambients/Ніч біля ставка.flac'), 'field');
-  assert.strictEqual(cat('Ambients/звукилеса.wav'), 'field');
-  assert.strictEqual(cat('Ambients/Сукалёгкийдождь.wav'), 'field');
-  assert.strictEqual(cat('Ambients/ахуєнийгул6хвилин.flac'), 'ambient');
-  assert.strictEqual(cat('Ambients/Хлопають1годину.flac'), 'crowd');
-  assert.strictEqual(cat('Ambients/ES_City Traffic 18 - SFX Producer.mp3'), 'field');
-  assert.strictEqual(cat('New Pack/Memes/PARTY HORN.mp3'), 'cartoon');
+  const real = [
+    ['Boom Library - Magic Bundle/boom35_1/MACK Effect Impact Sub Rumble.wav', 'magic'],
+    ['Boom Library - Magic Bundle/boom35_3/MACK Fire Burst Spirit Light.wav', 'magic.fire'],
+    ['Element Series - Water [SoundMorph]/WAV/Acid/MAGElem_WATER - Acid Demon 05.wav', 'magic.dark'],
+    ['BOOM.Library.DOGS.WAV/Dogs_01-07/Australian Shepherd (Pepper) Bark, Yelp 1.wav', 'animals.dogs'],
+    ['BOOM.Library.DOGS.WAV/Dogs_01-07/Border Collie (Lilu) Eat 1.wav', 'animals.dogs'],
+    ['KROTOS/Krotos Gun Foley SFX Library WAV/Pistol Slide.wav', 'weapons.guns'],
+    ['Boom ONE/BLUNT/WEAPBlnt_Hammer 1h Movement Soft_B00M_ONE.wav', 'weapons.melee'],
+    ['Новая папка/Аварии/Лобовое столкновение.mp3', 'vehicles.crash'],
+    ['Новая папка/Анатомические звуки/Мужчина зевает.mp3', 'human.body'],
+    ['Armas/1. Fornite SFX PACK/Shield Break 1.mp3', 'weapons.melee'],
+    ["Ambients/Дощ б'є по підвіконню.wav", 'weather.rain'],
+    ['Ambients/Ніч біля ставка.flac', 'ambience.nature'],
+    ['Ambients/звукилеса.wav', 'ambience.nature'],
+    ['Ambients/Сукалёгкийдождь.wav', 'weather.rain'],
+    ['Ambients/ахуєнийгул6хвилин.flac', 'ambience.drones'],
+    ['Ambients/Хлопають1годину.flac', 'crowds.applause'],
+    ['Ambients/ES_City Traffic 18 - SFX Producer.mp3', 'ambience.city'],
+    ['Новая папка/Видео и аудио техника/ГРАММОФОН, ПОЦАРАПАННАЯ ДОРОЖКА.mp3', 'tech.computers'],
+    ['Новая папка/Другие/ЛЕД, КРОШЕНИЕ, ОДИН РАЗ 11.mp3', 'weather.snow'],
+  ];
+  for (const [p, want] of real) assert.strictEqual(cat(p), want, p);
+});
+
+test('ошибки из первой версии больше не повторяются', () => {
+  const cat = (p) => { const r = C.classify(p.split('/'), null); return r.sub || r.cat; };
+  // «Автомат» — не всегда оружие.
+  assert.strictEqual(cat('Новая папка/Казино/Рулетка крутится.mp3'), 'tech.arcade');
+  assert.strictEqual(cat('Новая папка/Техника/Торговый раздатчик бутылок.mp3'), 'tech.arcade');
+  assert.strictEqual(cat('Новая папка/Игровой автомат, джекпот.mp3'), 'tech.arcade');
+  assert.strictEqual(cat('Оружие/Автомат, очередь.mp3'), 'weapons.guns');
+  // Имя файла важнее названия пака.
+  assert.strictEqual(cat('KROTOS/Krotos Gun Foley SFX Library WAV/Leather Steady Soft loop.wav'), 'foley.leather');
+  assert.strictEqual(cat('Boom Library - Guns Bundle/Guns - Designed/Rifle Shot 01.wav'), 'weapons.guns');
+});
+
+test('названия категорий на двух языках', () => {
+  assert.strictEqual(C.labelOf('magic.fire', 'ru'), 'Огонь и фаерболы');
+  assert.strictEqual(C.labelOf('magic.fire', 'en'), 'Fire Spells');
+  for (const c of C.CATEGORIES) {
+    assert.ok(c.labels.ru && c.labels.en, c.id);
+    if (c.parent) assert.ok(C.BY_ID[c.parent], c.id);
+  }
 });

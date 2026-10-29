@@ -15,7 +15,13 @@ ${read('renderer/styles.css')}
 </style>
 ${body}
 <script>
+${read('shared/taxonomy.js')}
+</script>
+<script>
 ${read('shared/categorize.js')}
+</script>
+<script>
+${read('renderer/i18n.js')}
 </script>
 <script>
 ${read('renderer/demo.js')}
