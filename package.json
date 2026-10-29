@@ -65,7 +65,7 @@
       ],
       "icon": "build/icon-mac.png",
       "category": "public.app-category.music",
-      "identity": "-",
+      "identity": null,
       "hardenedRuntime": false,
       "darkModeSupport": true,
       "artifactName": "Sampleteka-${version}-mac-${arch}.${ext}"
@@ -73,6 +73,7 @@
     "dmg": {
       "title": "Сэмплотека ${version}",
       "artifactName": "Sampleteka-${version}-mac-${arch}.${ext}"
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
