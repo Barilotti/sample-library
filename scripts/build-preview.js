@@ -24,6 +24,9 @@ ${read('shared/categorize.js')}
 ${read('shared/learn.js')}
 </script>
 <script>
+${read('shared/vendors.js')}
+</script>
+<script>
 ${read('renderer/i18n.js')}
 </script>
 <script>

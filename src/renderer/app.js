@@ -1,4 +1,4 @@
-/* global Categorize, DemoBackend, I18n, Listen, Learn */
+/* global Categorize, DemoBackend, I18n, Listen, Learn, Vendors */
 'use strict';
 
 (function () {
@@ -29,7 +29,7 @@
     recent: [],
     settings: { autoplay: true, volume: 0.8 },
     view: { lib: 'all', cat: null, sub: null, folder: null },
-    filters: { q: '', type: '', bpmMin: null, bpmMax: null, key: '', dur: '' },
+    filters: { q: '', type: '', bpmMin: null, bpmMax: null, key: '', dur: '', vendor: '' },
     sort: { key: null, dir: 1 },
     filtered: [],
     sel: -1,
@@ -49,6 +49,7 @@
       it._tok = ' ' + toks + ' ' + C.translit(toks);
       it._nameN = C.normalize(it.name);
       it._key = normKey(it.key);
+      it._vendor = Vendors.vendorOf(it.path);
     }
     return items;
   }
@@ -161,6 +162,7 @@
       const bMax = f.bpmMax || (pq.bpm ? pq.bpm + 2 : null);
       if ((bMin || bMax) && (it.bpm == null || (bMin && it.bpm < bMin) || (bMax && it.bpm > bMax))) continue;
       if (f.key && it._key !== f.key) continue;
+      if (f.vendor && (it._vendor || '~') !== f.vendor) continue;
       if (dMin != null && (it.duration == null || it.duration < dMin || it.duration >= dMax)) continue;
 
       const ws = pq.words.map((w, i) => {
@@ -297,6 +299,7 @@
     $('f-bpm-pill').classList.toggle('on', !!(f.bpmMin || f.bpmMax));
     $('f-key-pill').classList.toggle('on', !!f.key);
     $('f-dur-pill').classList.toggle('on', !!f.dur);
+    $('f-vendor-pill').classList.toggle('on', !!f.vendor);
 
     const v = state.view;
     let chips = '';
@@ -419,6 +422,7 @@
     renderRows(true);
     renderEmpty();
     renderKeyOptions();
+    renderVendorOptions();
   }
 
   let keyOptsFor = null;
@@ -435,6 +439,28 @@
     }
     sel.innerHTML = html;
     sel.value = cur;
+  }
+
+  // Авторы библиотек: самые большие сверху, «не определён» в конце.
+  let vendorOptsFor = null;
+  function renderVendorOptions() {
+    if (vendorOptsFor && vendorOptsFor.items === state.items && vendorOptsFor.lang === I18n.lang) return;
+    vendorOptsFor = { items: state.items, lang: I18n.lang };
+    const count = new Map();
+    for (const it of state.items) {
+      const v = it._vendor || '~';
+      count.set(v, (count.get(v) || 0) + 1);
+    }
+    const sel = $('f-vendor');
+    const known = [...count].filter(([v]) => v !== '~').sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    $('f-vendor-pill').hidden = !known.length;
+    let html = `<option value="">${tr('anyVendor')}</option>`;
+    html += known.map(([v, n]) => `<option value="${esc(v)}">${esc(v)} · ${fmtCount(n)}</option>`).join('');
+    if (count.has('~')) html += `<option value="~">${tr('vendorNone')} · ${fmtCount(count.get('~'))}</option>`;
+    const cur = state.filters.vendor || '';
+    sel.innerHTML = html;
+    sel.value = count.has(cur) || cur === '' ? cur : '';
+    if (sel.value !== cur) state.filters.vendor = sel.value;
   }
 
   // ---------- Плеер ----------
@@ -714,6 +740,7 @@
       [tr('colLen'), fmtDur(player.duration || it.duration)],
       it.bpm ? [tr('tempo'), it.bpm + ' BPM'] : null,
       it._key ? [tr('colKey'), it._key] : null,
+      it._vendor ? [tr('vendor'), it._vendor] : null,
       [tr('format'), fmtFormat(it) + (it.channels ? ' ' + (it.channels === 1 ? tr('mono') : tr('stereo')) : '')],
     ];
     if (it.ai && it.ai.labels && it.ai.labels.length) facts.push([tr('heard'), it.ai.labels.slice(0, 2).map(([n, sc]) => `${n} ${Math.round(sc * 100)}%`).join(', ')]);
@@ -769,6 +796,7 @@
   }
   $('f-key').addEventListener('change', (e) => { state.filters.key = e.target.value; renderAll(true); });
   $('f-dur').addEventListener('change', (e) => { state.filters.dur = e.target.value; renderAll(true); });
+  $('f-vendor').addEventListener('change', (e) => { state.filters.vendor = e.target.value; renderAll(true); });
 
   $('list-head').addEventListener('click', (e) => {
     const b = e.target.closest('[data-sort]');
@@ -881,9 +909,9 @@
   });
 
   function resetFilters() {
-    state.filters = { q: '', type: '', bpmMin: null, bpmMax: null, key: '', dur: '' };
+    state.filters = { q: '', type: '', bpmMin: null, bpmMax: null, key: '', dur: '', vendor: '' };
     state.view = { lib: 'all', cat: null, sub: null, folder: null };
-    $('q').value = ''; $('f-bpm-min').value = ''; $('f-bpm-max').value = ''; $('f-key').value = ''; $('f-dur').value = '';
+    $('q').value = ''; $('f-bpm-min').value = ''; $('f-bpm-max').value = ''; $('f-key').value = ''; $('f-dur').value = ''; $('f-vendor').value = '';
     renderAll(true);
   }
 

@@ -1,7 +1,7 @@
 {
   "name": "sample-library",
   "productName": "Sampleteka",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Библиотека сэмплов для звукорежиссёров: индексирует папку, сама раскладывает звуки по категориям (RU/EN), поиск, прослушивание, перетаскивание в DAW.",
   "main": "src/main/main.js",
   "author": "Nick",
